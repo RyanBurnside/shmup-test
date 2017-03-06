@@ -1,0 +1,9 @@
+
+
+TODO...
+ 
+Look into making an instance copy method for classes.
+This is especially useful when copying instances from a "gallery" of game 
+objects.
+
+Organize getters, setters, and predicates for classes like in mover.lisp.
