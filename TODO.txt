@@ -7,3 +7,6 @@ This is especially useful when copying instances from a "gallery" of game
 objects.
 
 Organize getters, setters, and predicates for classes like in mover.lisp.
+
+
+Settle on a Lisp game library that isn't Linux specific and won't explode when a controller is polled. (SDL2 is a headache atm)
