@@ -32,4 +32,5 @@
 
 ;;; Other
 (defgeneric make-copy (entity)
-  (:documentation "Returns a freshly created copy of an instance. Good for cloning from a 'gallery' of predesigned instances.")
+  (:documentation "Returns a freshly created copy of an instance. Good for cloning from a 'gallery' of predesigned instances."))
+
