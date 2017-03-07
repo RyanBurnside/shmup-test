@@ -20,7 +20,7 @@
   (:documentation "Sets the x of a given object"))
 
 (defgeneric set-yf (entity value)
-  (:documentation "Sets the x of a given object"))
+  (:documentation "Sets the y of a given object"))
 
 (defgeneric stepf (entity)
   (:documentation "Take a step of movement according to internal state"))
@@ -31,7 +31,5 @@
   (:documentation "Returns true if two entities collide else return nil"))
 
 ;;; Other
-
 (defgeneric make-copy (entity)
-  (:documentation "Returns a freshly created copy of an instance. Good for cloning from a 'gallery' of predesigned instances."
-
+  (:documentation "Returns a freshly created copy of an instance. Good for cloning from a 'gallery' of predesigned instances.")
