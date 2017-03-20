@@ -34,6 +34,8 @@
   (when (<= (game-object-HP object) 0.0)
     (setf (game-object-dead object) t)))
 
+
+;;; Setters
 (defmethod set-HPf ((object game-object) (value number))
   ;; If passed a value <= 0 the dead flag is set to true
   (setf (slot-value object 'HP) value)
@@ -48,6 +50,8 @@
   ;; Reposition the hitbox
   (%hitbox-recenter game-object))
 
+
+;;; Predicates
 (defmethod collidep ((object game-object) (object2 game-object))
   (if (and (typep (game-object-hitbox object) 'hitbox) 
 	   (typep (game-object-hitbox object2) 'hitbox))

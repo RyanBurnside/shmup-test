@@ -5,14 +5,13 @@
   :author "Ryan Burnside"
   :license "GPL whatever"
   :serial t
-  :depends-on (#:cl-opengl #:lispbuilder-sdl #:clinch)
+  ;:depends-on (#:cl-opengl #:lispbuilder-sdl #:clinch)
   :components (
 	       (:file "package")
+	       (:file "score-table")
 	       (:file "ticker")
 	       (:file "hitbox")
 	       (:file "mover")
 	       (:file "game-object")
 	       (:file "generic-functions")
                (:file "shmup-test")))
-
-
