@@ -5,7 +5,7 @@
   :author "Ryan Burnside"
   :license "GPL whatever"
   :serial t
-  ;:depends-on (#:cl-opengl #:lispbuilder-sdl #:clinch)
+  :depends-on (#:lispbuilder-sdl)
   :components (
 	       (:file "package")
 	       (:file "score-table")

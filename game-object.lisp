@@ -19,7 +19,7 @@
 
 (defmethod %hitbox-recenter ((object game-object))
   ;; Hooks hitbox if not nil and repositions it to center
-  (when (typep object 'hitbox)
+  (when (typep (game-object-hitbox object) 'hitbox)
     (set-positionf (game-object-hitbox object)
 		   (mover-x object) 
 		   (mover-y object))))
@@ -48,7 +48,7 @@
 
 (defmethod stepf :after ((object game-object))
   ;; Reposition the hitbox
-  (%hitbox-recenter game-object))
+  (%hitbox-recenter object))
 
 
 ;;; Predicates
