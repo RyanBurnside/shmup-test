@@ -17,10 +17,10 @@
   (let ((delta (- b a)))
     (+ a (* percent delta))))
 
-(defmethod resetf ((table score-table) 
-		   (fill-name string) 
-		   (min-val integer)
-		   (max-val integer))
+(defmethod reset-scoresf ((table score-table) 
+			 (fill-name string) 
+			 (min-val integer)
+			 (max-val integer))
   "Reset the score table, interpolate over min-val max-val with filler name"
   (let ((min-v (min min-val max-val))
 	(max-v (max min-val max-val)))

@@ -3,20 +3,29 @@
 ;;TODO MAKE MAKE-COPY METHOD
 
 (defclass ticker ()
-  ((value :accessor ticker-value :initform 0 :initarg :value)
-   (paused :accessor ticker-paused :initform nil :initarg :paused))
-  (:documentation "A class that ticks with game steps then resets"))
+  ((value :accessor ticker-value :initform 0)
+   (ready-at :accessor ticker-ready-at :initform 0 :initarg :ready-at))
+  (:documentation "A class that ticks from 0 to ready-at then stops"))
 
-(defmethod pause ((object ticker))
-  (setf (paused object) t))
+(defmethod ready ((ticker ticker))
+  (= (ticker-value ticker)
+     (ticker-ready-at ticker)))
 
-(defmethod resume ((object ticker))
-  (setf (paused object) nil))
+(defmethod tickf ((ticker ticker))
+  (unless (ready ticker)
+    (incf (ticker-value ticker))))
 
-(defmethod tick-up ((object ticker))
-  (unless paused
-    (incf (paused object))))
+(defmethod resetf ((ticker ticker))
+  (setf (ticker-value ticker) 0))
 
-(defmethod tick-down ((object ticker))
-  (unless paused
-    (decf (paused object))))
+(defclass ticker-action (ticker)
+  ((on-ready :accessor ticker-on-ready  :initform (lambda()())
+	     :initarg :on-ready :documentation "Action done on trigger"))
+   (:documentation "Calls action on-ready then resets timer to 0"))
+
+(defmethod tickf :after ((ticker-action ticker-action))
+  (when (ready ticker-action)
+    (funcall (ticker-on-ready ticker-action))
+    (resetf ticker-action)))
+
+

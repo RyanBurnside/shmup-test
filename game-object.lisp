@@ -24,6 +24,25 @@
 		   (mover-x object) 
 		   (mover-y object))))
 
+;; Optional creation function
+(defun make-game-object (x y &key 
+			       (speed 0.0)
+			       (direction 0.0)
+			       (width nil)
+			       (height nil))
+    (make-instance 'game-object
+     :hitbox (if (and (numberp width) (numberp height))
+		 (make-instance 'hitbox
+				:center-x x
+				:center-y y
+				:width width
+				:height height)
+		 nil)
+     :x x
+     :y y
+     :speed speed
+     :direction direction))
+
 
 (defmethod initialize-instance :after ((object game-object) &key)
   (%hitbox-recenter object))
@@ -34,6 +53,9 @@
   (when (<= (game-object-HP object) 0.0)
     (setf (game-object-dead object) t)))
 
+;;; Getters
+(defmethod get-hitbox ((object game-object))
+  (game-object-hitbox object))
 
 ;;; Setters
 (defmethod set-HPf ((object game-object) (value number))

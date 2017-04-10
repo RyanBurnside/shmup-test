@@ -13,5 +13,8 @@
 	       (:file "hitbox")
 	       (:file "mover")
 	       (:file "game-object")
+	       (:file "enemy")
+	       (:file "player")
+	       (:file "game")
 	       (:file "generic-functions")
                (:file "shmup-test")))

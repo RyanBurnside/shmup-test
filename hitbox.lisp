@@ -32,7 +32,7 @@
   (values (hitbox-center-x object) (hitbox-center-y object)))
 
 (defmethod size ((object hitbox))
-  (values (hitbox-center-width object) (hitbox-center-height object)))
+  (values (hitbox-width object) (hitbox-height object)))
 
 ;;; Setters
 (defmethod set-sizef ((object hitbox) (width number) (height number))

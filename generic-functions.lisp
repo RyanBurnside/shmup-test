@@ -6,6 +6,12 @@
 (defgeneric location (entity)
   (:documentation "Returns the x and y position of a given object as values"))
 
+(defgeneric width (entity)
+  (:documentation "Returns the width of an object"))
+
+(defgeneric height (entity)
+  (:documentation "Returns the height of an object"))
+
 ;;; Mutators
 (defgeneric set-directionf (entity value)
   (:documentation "Sets the direction of a given object"))
@@ -24,6 +30,11 @@
 
 (defgeneric stepf (entity)
   (:documentation "Take a step of movement according to internal state"))
+
+(defgeneric updatef (entity)
+  (:documentation "Update an object"))
+
+
 
 
 ;;; Predicates

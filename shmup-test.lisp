@@ -10,60 +10,83 @@
 (defparameter *center-width* (/ *width*  2))
 (defparameter *center-height* (/ *height*  2))
 (defparameter *objects* '())
-(defparameter *screen-hitbox* 
-  (make-instance 'hitbox 
-		 :center-x *center-width*
-		 :center-y *center-height*
-		 :width *center-width*
-		 :height *center-height*))
 
-(defun new-rand-object ()
-  (make-instance 'game-object
-		 :hitbox (make-instance 'hitbox
-					:center-x *center-width*
-					:center-y *center-height*
-					:width 32
-					:height 32)
-		 :x *center-width*
-		 :y *center-height*
-		 :speed (+ (* (random 1.0) 5.0) 1.0)
-		 :direction (* (random 2.0) pi)))
-							   
-(defun update-objects ()
-  (loop for i in *objects* do
-    (stepf i)
-    (when (not (collidep *screen-hitbox* (game-object-hitbox i)))
-      (setf (game-object-dead i) t))))
+(defparameter *engine* (make-instance 'game :width *width* :height *height*))
 
-(defun prune-dead ()
-  (setf *objects* (delete-if #'game-object-dead *objects*)))
+
+(defun burst-fire (x y num-shots aim-direction spread recipient-function)
+  "burst-fire will pass the valuex x, y, direction, speed into 
+recipient-function,"
+  (if (< num-shots 1) (return-from burst-fire))
+  (when (= num-shots 1) ; 1 or less shots
+    (funcall recipient-function x y aim-direction)
+    (return-from burst-fire))
+  (let ((start-angle (- aim-direction (* spread .5)))
+	(step-angle (/ spread (1- (* 1.0 num-shots)))))
+	(dotimes (i num-shots)
+	  (funcall recipient-function x y (+ start-angle (* step-angle i))))))
+ 
+(defun burst-new (x y direction)
+  (add-enemy-shotf *engine*
+			(make-game-object
+			 *center-width*
+			 *center-height*
+			 :speed 5.0
+			 :direction direction
+			 :width 16
+			 :height 16)))
+
+(defun game-update ()
+  (tickf *direction-ticker*)
+  (burst-fire *center-width* 
+	      *center-height*
+	      8
+	      *shot-direction*
+	      (* pi 2.0)
+	      #'burst-new)
+  (burst-fire *center-width* 
+	      *center-height*
+	      8
+	      (- *shot-direction*)
+	      (* pi 2.0)
+	      #'burst-new)
+
+  (stepf *engine*))
+
+
+
+(defparameter *shot-direction* 0.0)
+(defparameter *direction-ticker* (make-instance 'ticker-action
+					       :ready-at 1
+					       :on-ready
+					       (lambda ()
+						 (incf *shot-direction*
+						       (/ PI 10.0)))))
+
+
+(defun game-draw ()
+  (loop for i across (game-enemy-shots *engine*) 
+     do
+       (sdl:draw-filled-circle-*
+	(round (mover-x i)) 
+	(round (mover-y i)) 
+	8
+	:color sdl:*white*)))
 
 (defun shmup-test ()
   ;; Make sure the libraries are loaded on startup.
   ;; Necessary when creating a stand-alone executable.
   (sdl:load-library)
   (setf *objects* '())
-  (sdl:with-init ()
-    (sdl:window 
-     *width* 
-     *height* 
-     :title-caption "Shmup Test")
-    (setf (sdl:frame-rate) 60)
-    (sdl:with-events ()
-      (:quit-event () t)
-      (:idle ()
-	     (sdl:clear-display sdl:*black*)
-	     (dotimes (i 4)
-	       (setf *objects* (nconc *objects* 
-				      (list (new-rand-object)))))
-	     (update-objects)
-	     (prune-dead)
-	     (dolist (i *objects*)
-	       (sdl:draw-filled-circle-*
-			      (round (mover-x i)) 
-			      (round (mover-y i)) 
-			      8
-
-			     :color sdl:*white*))
-
-    (sdl:update-display)))))
+  (sdl:with-init () (sdl:window 
+		     (width *engine*)
+		     (height *engine*)
+		     :title-caption "Shmup Test")
+		 (setf (sdl:frame-rate) 60)
+		 (sdl:with-events ()
+		   (:quit-event () t)
+		   (:idle ()
+			  (sdl:clear-display sdl:*black*)
+			  (game-update)
+			  (game-draw)
+			  (sdl:update-display)))))

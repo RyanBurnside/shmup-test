@@ -30,7 +30,7 @@
 	(* (sin (mover-direction object))
 	   (mover-speed object)))) ;step-y
 
-(defmethod location ((object mover)) ;Note, "position" is a register word
+(defmethod location ((object mover)) ;Note, "position" is a resrved word
   (values (mover-x object) (mover-y object)))
 
 (defmethod set-directionf ((object mover) (val number))
