@@ -5,7 +5,7 @@
   :author "Ryan Burnside"
   :license "GPL whatever"
   :serial t
-  :depends-on (#:lispbuilder-sdl)
+  :depends-on (#:lispbuilder-sdl #:lispbuilder-sdl-image) ;CHECK SYNTAX
   :components (
 	       (:file "package")
 	       (:file "score-table")

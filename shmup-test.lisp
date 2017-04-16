@@ -5,8 +5,8 @@
 ;;; "shmup-test" goes here. Hacks and glory await!
 
 
-(defparameter *width* 600)
-(defparameter *height* 800)
+(defparameter *width* 240)
+(defparameter *height* 320)
 (defparameter *center-width* (/ *width*  2))
 (defparameter *center-height* (/ *height*  2))
 (defparameter *objects* '())
@@ -28,29 +28,43 @@ recipient-function,"
  
 (defun burst-new (x y direction)
   (add-enemy-shotf *engine*
-			(make-game-object
-			 *center-width*
-			 *center-height*
-			 :speed 5.0
-			 :direction direction
-			 :width 16
-			 :height 16)))
+		   (make-game-object *center-width*
+				     (floor (* *height* .33))
+				     :speed 5.0
+				     :direction direction
+				     :width 16
+				     :height 16)))
+
+(defun player-shoot (x y direction)
+  (add-player-shotf *engine* 
+		    (make-game-object x
+				      y
+				      :speed 10.0
+				      :direction direction
+				      :width 16
+				      :height 16)))
 
 (defun game-update ()
   (tickf *direction-ticker*)
   (burst-fire *center-width* 
 	      *center-height*
-	      8
+	      1
 	      *shot-direction*
 	      (* pi 2.0)
 	      #'burst-new)
   (burst-fire *center-width* 
 	      *center-height*
-	      8
+	      1
 	      (- *shot-direction*)
 	      (* pi 2.0)
 	      #'burst-new)
-
+  (when (or (sdl:mouse-left-p) (sdl:get-key-state :sdl-key-z))
+    (burst-fire (sdl:mouse-x)
+		(sdl:mouse-y)
+		1
+		(* pi 1.5)
+		(* pi .10)
+		#'player-shoot))
   (stepf *engine*))
 
 
@@ -65,13 +79,23 @@ recipient-function,"
 
 
 (defun game-draw ()
-  (loop for i across (game-enemy-shots *engine*) 
-     do
-       (sdl:draw-filled-circle-*
-	(round (mover-x i)) 
-	(round (mover-y i)) 
-	8
-	:color sdl:*white*)))
+  (let ((pt (sdl:point)))
+    (loop for i across (game-enemy-shots *engine*) 
+       do
+	 (setf (aref pt 0) (floor (mover-x i)))
+	 (setf (aref pt 1) (floor (mover-y i)))
+	 (sdl:draw-surface-at *bullet-image* pt))
+    (loop for i across (game-player-shots *engine*) 
+       do
+	 (setf (aref pt 0) (floor (mover-x i)))
+	 (setf (aref pt 1) (floor (mover-y i)))
+	 (sdl:draw-surface-at *bullet-image* pt))
+    (sdl:draw-surface-at-* *player-image* (sdl:mouse-x)
+			 (sdl:mouse-y))))
+
+
+(defparameter *bullet-image* nil)
+(defparameter *player-image* nil)
 
 (defun shmup-test ()
   ;; Make sure the libraries are loaded on startup.
@@ -80,9 +104,19 @@ recipient-function,"
   (setf *objects* '())
   (sdl:with-init () (sdl:window 
 		     (width *engine*)
-		     (height *engine*)
-		     :title-caption "Shmup Test")
+		     (height *engine* )
+		     :title-caption "Shmup Test"
+		     :DOUBLE-BUFFER T)
 		 (setf (sdl:frame-rate) 60)
+		 (setf *bullet-image* 
+		       (sdl-image:load-image 
+			"Resources/Sprites/test_shot.png" 
+			:image-type :PNG :force t :color-key-at #(0 0)))
+
+		 (setf *player-image* 
+		       (sdl-image:load-image 
+			"Resources/Sprites/ships.gif" 
+			:image-type :GIF :force t :color-key-at #(0 0)))
 		 (sdl:with-events ()
 		   (:quit-event () t)
 		   (:idle ()
