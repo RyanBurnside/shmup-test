@@ -7,7 +7,7 @@
    (ready-at :accessor ticker-ready-at :initform 0 :initarg :ready-at))
   (:documentation "A class that ticks from 0 to ready-at then stops"))
 
-(defmethod ready ((ticker ticker))
+(defmethod readyp ((ticker ticker))
   (= (ticker-value ticker)
      (ticker-ready-at ticker)))
 

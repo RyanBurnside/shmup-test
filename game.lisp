@@ -6,7 +6,7 @@
 
 ;; Accessory defuns
 (defun burst-fire (x y num-shots aim-direction spread recipient-function)
-  "burst-fire will pass the valuex x, y, direction, speed into 
+  "burst-fire will pass the valuex x, y, direction 
 recipient-function,"
   (if (< num-shots 1) (return-from burst-fire))
   (when (= num-shots 1) ; 1 or less shots
@@ -54,11 +54,52 @@ recipient-function,"
 		       :height height
 		       :center-x (/ width 2)
 		       :center-y (/ height 2)))
-  (dotimes (i 4)
+  (dotimes (i 2)
     (add-playerf game
 		 (make-instance 'player 
 				:x (random (width game))
 				:y (random (height game)))))
+
+  ;; Bind player 1 actions
+  (setf (player-left-p (aref (game-players game) 0))
+	(lambda () (sdl:get-key-state :sdl-key-left)))
+  (setf (player-right-p (aref (game-players game) 0))
+	(lambda () (sdl:get-key-state :sdl-key-right)))
+  (setf (player-up-p (aref (game-players game) 0))
+	(lambda () (sdl:get-key-state :sdl-key-up)))
+  (setf (player-down-p (aref (game-players game) 0))
+	(lambda () (sdl:get-key-state :sdl-key-down)))
+  (setf (player-fire-p (aref (game-players game) 0))
+	(lambda () (sdl:get-key-state :sdl-key-z)))
+  (setf (player-shot-function (aref (game-players game) 0))
+	(lambda () (burst-fire (mover-x (aref (game-players game) 0))
+			       (mover-y (aref (game-players game) 0))
+			       4
+			       (* pi 1.5)
+			       (* pi .1)
+		    (lambda (x y direction)
+		      (player-shootf game x y direction)))))
+
+  ;; Bind player 2 actions
+  (setf (player-left-p (aref (game-players game) 1))
+	(lambda () (sdl:get-key-state :sdl-key-a)))
+  (setf (player-right-p (aref (game-players game) 1))
+	(lambda () (sdl:get-key-state :sdl-key-d)))
+  (setf (player-up-p (aref (game-players game) 1))
+	(lambda () (sdl:get-key-state :sdl-key-w)))
+  (setf (player-down-p (aref (game-players game) 1))
+	(lambda () (sdl:get-key-state :sdl-key-s)))
+  (setf (player-fire-p (aref (game-players game) 1))
+	(lambda () (sdl:get-key-state :sdl-key-lctrl)))
+  (setf (player-shot-function (aref (game-players game) 1))
+	(lambda () (burst-fire (mover-x (aref (game-players game) 1))
+			       (mover-y (aref (game-players game) 1))
+			       4
+			       (* pi 1.5)
+			       (* pi .1)
+		    (lambda (x y direction)
+		      (player-shootf game x y direction)))))
+
 
   ;; Should always be the last function executed in init as it starts SDL
   (sdl:load-library) ;; DO NOT APPEND BELOW THIS LINE
@@ -129,19 +170,19 @@ recipient-function,"
   (let ((pt (sdl:point)))
     (loop for i across (game-enemy-shots game) 
        do
-	 (setf (aref pt 0) (floor (mover-x i)))
-	 (setf (aref pt 1) (floor (mover-y i)))
+	 (setf (aref pt 0) (- (floor (mover-x i)) 4))
+	 (setf (aref pt 1) (- (floor (mover-y i)) 4))
 	 (sdl:draw-surface-at (game-bullet-image game) pt))
     (loop for i across (game-player-shots game) 
        do
-	 (setf (aref pt 0) (floor (mover-x i)))
-	 (setf (aref pt 1) (floor (mover-y i)))
+	 (setf (aref pt 0) (- (floor (mover-x i)) 4))
+	 (setf (aref pt 1) (- (floor (mover-y i)) 4))
 	 (sdl:draw-surface-at (game-bullet-image game) pt))
     (loop for p across (game-players game)
 	 do
 	 (sdl:draw-surface-at-* (game-player-image game)
-				(floor (mover-x p))
-				(floor (mover-y p))))))
+				(- (floor (mover-x p)) 16)
+				(- (floor (mover-y p)) 16)))))
 
 (defmethod print-debug ((game game))
   "Debug method called during keypress"
@@ -181,7 +222,7 @@ recipient-function,"
 
     (loop for i across players 
        do (unless (game-object-dead i)
-	    (stepf i)))
+	    (updatef i)))
     (loop for i across player-shots 
        do
 	 (when (not (collidep play-area (get-hitbox i)))

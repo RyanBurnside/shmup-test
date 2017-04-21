@@ -32,5 +32,4 @@
 
 (defun shmup-test ()
   ;; A single instance of game starts the whole program
-  (make-instance 'game :width *width* :height *height*)
- )
+  (make-instance 'game :width *width* :height *height*))
