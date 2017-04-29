@@ -1,5 +1,4 @@
 (in-package #:shmup-test)
-
 ;;;; This is the game class, that actually handles resources and major
 ;;;; state changes withing the game
 
@@ -14,41 +13,48 @@ recipient-function,"
     (return-from burst-fire))
   (let ((start-angle (- aim-direction (* spread .5)))
 	(step-angle (/ spread (1- (* 1.0 num-shots)))))
-	(dotimes (i num-shots)
-	  (funcall recipient-function x y (+ start-angle (* step-angle i))))))
+    (dotimes (i num-shots)
+      (funcall recipient-function x y (+ start-angle (* step-angle i))))))
 
 (defclass game ()
-  ((state        :accessor game-state :initform 'title)
+  ((state        :accessor state :initform 'title)
 
-   (players :accessor game-players
+   (players :accessor players
 	    :initform (make-array  1 :fill-pointer 0 :adjustable t)
 	    :documentation "A vector allowed to grow as needed")
 
-   (player-shots :accessor game-player-shots
+   (player-shots :accessor player-shots
 		 :initform (make-array  1 :fill-pointer 0 :adjustable t)
 		 :documentation "A vector allowed to grow as needed")
 
-   (enemies  :accessor game-enemies
-		   :initform  (make-array 1 :fill-pointer 0 :adjustable t)
-		   :documentation "A vector allowed to grow as needed")
+   (enemies  :accessor enemies
+	     :initform  (make-array 1 :fill-pointer 0 :adjustable t)
+	     :documentation "A vector allowed to grow as needed")
 
-   (enemy-shots  :accessor game-enemy-shots 
+   (enemy-shots  :accessor enemy-shots 
 		 :initform  (make-array 1 :fill-pointer 0 :adjustable t)
 		 :documentation "A vector allowed to grow as needed")
-   (play-area :accessor game-play-area :initform (make-instance 'hitbox 
-								:center-x 240
-								:center-y 320
-								:width 480
-								:height 640)
+
+   (play-area :accessor play-area :initform (make-instance 'hitbox 
+							   :center-x 120
+							   :center-y 160
+							   :width 240
+							   :height 320)
 	      :documentation "Hitbox for defining play area")
+
+   ;; Some sprite related routines
+   (screen-buffer :accessor game-screen-buffer
+		  :documentation "Screen buffer slot, 240x320"
+		  :initform nil)
    (player-image :accessor game-player-image)
-   (bullet-image :accessor game-bullet-image)))
+   (bullet-images :accessor game-bullet-images)
+   (bullet-images-cells :accessor game-bullet-images-cells)))
 
 (defmethod initialize-instance :after ((game game) 
 				       &key 
 					 (width 600)
 					 (height 800))
-  (setf (game-play-area game)
+  (setf (play-area game)
 	(make-instance 'hitbox 
 		       :width width 
 		       :height height
@@ -61,58 +67,71 @@ recipient-function,"
 				:y (random (height game)))))
 
   ;; Bind player 1 actions
-  (setf (player-left-p (aref (game-players game) 0))
+  (setf (left-p (aref (players game) 0))
 	(lambda () (sdl:get-key-state :sdl-key-left)))
-  (setf (player-right-p (aref (game-players game) 0))
+  (setf (right-p (aref (players game) 0))
 	(lambda () (sdl:get-key-state :sdl-key-right)))
-  (setf (player-up-p (aref (game-players game) 0))
+  (setf (up-p (aref (players game) 0))
 	(lambda () (sdl:get-key-state :sdl-key-up)))
-  (setf (player-down-p (aref (game-players game) 0))
+  (setf (down-p (aref (players game) 0))
 	(lambda () (sdl:get-key-state :sdl-key-down)))
-  (setf (player-fire-p (aref (game-players game) 0))
+  (setf (fire-p (aref (players game) 0))
 	(lambda () (sdl:get-key-state :sdl-key-z)))
-  (setf (player-shot-function (aref (game-players game) 0))
-	(lambda () (burst-fire (mover-x (aref (game-players game) 0))
-			       (mover-y (aref (game-players game) 0))
+  (setf (shot-function (aref (players game) 0))
+	(lambda () (burst-fire (x (aref (players game) 0))
+			       (y (aref (players game) 0))
 			       4
 			       (* pi 1.5)
 			       (* pi .1)
-		    (lambda (x y direction)
-		      (player-shootf game x y direction)))))
+			       (lambda (x y direction)
+				 (player-shootf game x y direction)))))
 
   ;; Bind player 2 actions
-  (setf (player-left-p (aref (game-players game) 1))
+  (setf (left-p (aref (players game) 1))
 	(lambda () (sdl:get-key-state :sdl-key-a)))
-  (setf (player-right-p (aref (game-players game) 1))
+  (setf (right-p (aref (players game) 1))
 	(lambda () (sdl:get-key-state :sdl-key-d)))
-  (setf (player-up-p (aref (game-players game) 1))
+  (setf (up-p (aref (players game) 1))
 	(lambda () (sdl:get-key-state :sdl-key-w)))
-  (setf (player-down-p (aref (game-players game) 1))
+  (setf (down-p (aref (players game) 1))
 	(lambda () (sdl:get-key-state :sdl-key-s)))
-  (setf (player-fire-p (aref (game-players game) 1))
+  (setf (fire-p (aref (players game) 1))
 	(lambda () (sdl:get-key-state :sdl-key-lctrl)))
-  (setf (player-shot-function (aref (game-players game) 1))
-	(lambda () (burst-fire (mover-x (aref (game-players game) 1))
-			       (mover-y (aref (game-players game) 1))
+  (setf (shot-function (aref (players game) 1))
+	(lambda () (burst-fire (x (aref (players game) 1))
+			       (y (aref (players game) 1))
 			       4
 			       (* pi 1.5)
 			       (* pi .1)
-		    (lambda (x y direction)
-		      (player-shootf game x y direction)))))
+			       (lambda (x y direction)
+				 (shootf game x y direction)))))
 
 
   ;; Should always be the last function executed in init as it starts SDL
   (sdl:load-library) ;; DO NOT APPEND BELOW THIS LINE
   (sdl:with-init () (sdl:window 
-		     (hitbox-width (game-play-area game))
-		     (hitbox-height (game-play-area game ))
+		     240
+		     320
 		     :title-caption "Shmup Test"
 		     :DOUBLE-BUFFER T)
 		 (setf (sdl:frame-rate) 60)
-		 (setf (game-bullet-image game)
+		 ;; Create screen buffer 240x320
+		 (setf (game-screen-buffer game)
+		       (sdl:create-surface 240 320))
+
+		 ;; Load bullet sprite sheet
+		 (setf (game-bullet-images game)
 		       (sdl-image:load-image 
-			"Resources/Sprites/test_shot.png" 
-			:image-type :PNG :force t :color-key-at #(0 0)))
+			"Resources/Sprites/shots.gif" 
+			:image-type :GIF :force t :color-key-at #(0 0)))
+		 ;; Create cells for bullet sprite sheet
+		 (setf (game-bullet-images-cells game)
+		       (loop for y from 0 to (- 192 16) by 16
+			  append (loop for x from 0 to (- 192 16) by 16
+				    collect (list x y 16 16))))
+		 ;; Assign cells to bullet sprite sheet  
+		 (setf (sdl:cells (game-bullet-images game))
+		       (game-bullet-images-cells game))
 		 
 		 (setf (game-player-image game)
 		       (sdl-image:load-image 
@@ -127,24 +146,24 @@ recipient-function,"
 
 ;;; getters
 (defmethod width ((game game))
-  (hitbox-width (game-play-area game)))
+  (width (play-area game)))
 
 (defmethod height ((game game))
-  (hitbox-height (game-play-area game)))
+  (height (play-area game)))
 
 
 ;;; Mutators
 (defmethod add-playerf ((game game) (player player))
-  (vector-push-extend player (game-players game)))
+  (vector-push-extend player (players game)))
 
 (defmethod add-enemyf ((game game) (enemy enemy))
-  (vector-push-extend enemy (game-enemies game)))
+  (vector-push-extend enemy (enemies game)))
 
 (defmethod add-enemy-shotf ((game game) (enemy-shot game-object))
-  (vector-push-extend enemy-shot (game-enemy-shots game)))
+  (vector-push-extend enemy-shot (enemy-shots game)))
 
 (defmethod add-player-shotf ((game game) (player-shot game-object))
-  (vector-push-extend player-shot (game-player-shots game)))
+  (vector-push-extend player-shot (player-shots game)))
 
 (defmethod burst-newf ((game game) x y direction)
   (add-enemy-shotf game
@@ -167,37 +186,47 @@ recipient-function,"
 
 (defmethod draw-gamef ((game game))
   "Main method for drawing game"
+  (sdl:clear-display sdl:*black* :surface (game-screen-buffer game))
   (let ((pt (sdl:point)))
-    (loop for i across (game-enemy-shots game) 
+    (loop for i across (enemy-shots game) 
        do
-	 (setf (aref pt 0) (- (floor (mover-x i)) 4))
-	 (setf (aref pt 1) (- (floor (mover-y i)) 4))
-	 (sdl:draw-surface-at (game-bullet-image game) pt))
-    (loop for i across (game-player-shots game) 
+	 (setf (aref pt 0) (- (floor (x i)) 8))
+	 (setf (aref pt 1) (- (floor (y i)) 8))
+	 (sdl:draw-surface-at (game-bullet-images game) pt 
+			      :cell (+ 24 (random 5))
+			      :surface (game-screen-buffer game)))
+    (loop for i across (player-shots game) 
        do
-	 (setf (aref pt 0) (- (floor (mover-x i)) 4))
-	 (setf (aref pt 1) (- (floor (mover-y i)) 4))
-	 (sdl:draw-surface-at (game-bullet-image game) pt))
-    (loop for p across (game-players game)
-	 do
+	 (setf (aref pt 0) (- (floor (x i)) 8))
+	 (setf (aref pt 1) (- (floor (y i)) 8))
+	 (sdl:draw-surface-at (game-bullet-images game) 
+			      pt 
+			      :cell 102 
+			      :surface (game-screen-buffer game)))
+    (loop for p across (players game)
+       do
 	 (sdl:draw-surface-at-* (game-player-image game)
-				(- (floor (mover-x p)) 16)
-				(- (floor (mover-y p)) 16)))))
+				(- (floor (x p)) 16)
+				(- (floor (y p)) 16)
+				:surface (game-screen-buffer game))))
+
+  (sdl:draw-surface-at-* (game-screen-buffer game) 0 0))
+
 
 (defmethod print-debug ((game game))
   "Debug method called during keypress"
   (when (sdl:get-key-state :sdl-key-f1)
-    (format t "player shots: ~a~%" (length (game-player-shots game)))
-    (format t "enemy shots: ~a~%" (length (game-enemy-shots game)))
-    (format t "enemies: ~a~%" (length (game-enemies game)))
-    (format t "players: ~a~%" (length (game-players game)))))
-    
+    (format t "player shots: ~a~%" (length (player-shots game)))
+    (format t "enemy shots: ~a~%" (length (enemy-shots game)))
+    (format t "enemies: ~a~%" (length (enemies game)))
+    (format t "players: ~a~%" (length (players game)))))
+
 (defmethod reset-gamef ((game game))
   "Reset the game to default state"
   (setf (game-state game) 'title)
-  (reset-fill-vectorf (game-player-shots game))
-  (reset-fill-vectorf (game-enemy-shots game))
-  (reset-fill-vectorf (game-enemies game)))
+  (reset-fill-vectorf (player-shots game))
+  (reset-fill-vectorf (enemy-shots game))
+  (reset-fill-vectorf (enemies game)))
 
 (defmethod reset-fill-vectorf ((vec vector))
   "Set the fill pointer to 0, prepare to stomp over old values"
@@ -206,11 +235,11 @@ recipient-function,"
 (defmethod stepf ((game game))
   "Main step function for the game"
   (print-debug game)
-  (with-accessors ((players game-players)
-		   (player-shots game-player-shots)
-		   (enemies game-enemies)
-		   (enemy-shots game-enemy-shots)
-		   (play-area game-play-area))
+  (with-accessors ((players players)
+		   (player-shots player-shots)
+		   (enemies enemies)
+		   (enemy-shots enemy-shots)
+		   (play-area play-area))
       game
     (burst-fire (* (width game) .5)
 		(* (height game) .5)
@@ -221,33 +250,33 @@ recipient-function,"
 		  (burst-newf game x y direction)))
 
     (loop for i across players 
-       do (unless (game-object-dead i)
+       do (unless (dead i)
 	    (updatef i)))
     (loop for i across player-shots 
        do
 	 (when (not (collidep play-area (get-hitbox i)))
-	   (setf (game-object-dead i) t))
-	 (unless (game-object-dead i)
-	    (stepf i)))
+	   (setf (dead i) t))
+	 (unless (dead i)
+	   (stepf i)))
     (loop for i across enemies 
        do
 	 (when (not(collidep play-area (get-hitbox i)))
-	   (setf (game-object-dead i) t))
-	 (unless (game-object-dead i)
-	    (stepf i)))
+	   (setf (dead i) t))
+	 (unless (dead i)
+	   (stepf i)))
     (loop for i across enemy-shots 
        do
 	 (when (not (collidep play-area (get-hitbox i)))
-	   (setf (game-object-dead i) t))
-	 (unless (game-object-dead i)
-	    (stepf i)))
-  
+	   (setf (dead i) t))
+	 (unless (dead i)
+	   (stepf i)))
+    
     ;; game objection interactions here
 
 
     ;; cull dead shots and enemies
-    (setf enemies (delete-if #'game-object-dead enemies))
-    (setf enemy-shots (delete-if #'game-object-dead enemy-shots))
-    (setf player-shots (delete-if #'game-object-dead player-shots)))
+    (setf enemies (delete-if #'dead enemies))
+    (setf enemy-shots (delete-if #'dead enemy-shots))
+    (setf player-shots (delete-if #'dead player-shots)))
   (draw-gamef game))
-    
+

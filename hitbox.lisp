@@ -3,51 +3,51 @@
 ;;TODO MAKE MAKE-COPY METHOD
 
 (defclass hitbox ()
-  ((center-x :accessor hitbox-center-x :initarg :center-x)
-   (center-y :accessor hitbox-center-y :initarg :center-y)
-   (width    :accessor hitbox-width    :initarg :width)
-   (height   :accessor hitbox-height   :initarg :height))
+  ((center-x :accessor center-x :initarg :center-x)
+   (center-y :accessor center-y :initarg :center-y)
+   (width    :accessor width    :initarg :width)
+   (height   :accessor height   :initarg :height))
   (:documentation "A hitbox class for collision checking"))
 
 ;;; Getters
 (defmethod half-width ((object hitbox))  
-  (* (hitbox-width object) .5))
+  (* (width object) .5))
 
 (defmethod half-height ((object hitbox)) 
-  (* (hitbox-height object) .5))
+  (* (height object) .5))
 
 (defmethod top ((object hitbox)) 
-  (- (hitbox-center-y object) (half-height object)))
+  (- (center-y object) (half-height object)))
 
 (defmethod right ((object hitbox)) 
-  (+ (hitbox-center-x object) (half-width object)))
+  (+ (center-x object) (half-width object)))
 
 (defmethod bottom ((object hitbox)) 
-  (+ (hitbox-center-y object) (half-height object)))
+  (+ (center-y object) (half-height object)))
 
 (defmethod left ((object hitbox)) 
-  (- (hitbox-center-x object) (half-width object)))
+  (- (center-x object) (half-width object)))
 
 (defmethod location ((object hitbox))
-  (values (hitbox-center-x object) (hitbox-center-y object)))
+  (values (center-x object) (center-y object)))
 
 (defmethod size ((object hitbox))
-  (values (hitbox-width object) (hitbox-height object)))
+  (values (width object) (height object)))
 
 ;;; Setters
 (defmethod set-sizef ((object hitbox) (width number) (height number))
-  (setf (hitbox-width object) width)
-  (setf (hitbox-height object) height))
+  (setf (width object) width)
+  (setf (height object) height))
 
 (defmethod set-xf ((entity hitbox) (value number))
-  (setf (hitbox-center-x entity) value))
+  (setf (center-x entity) value))
 
 (defmethod set-yf ((entity hitbox) (value number))
-  (setf (hitbox-center-y entity) value))
+  (setf (center-y entity) value))
 
 (defmethod set-positionf ((object hitbox) (x number)  (y number))
-  (setf (hitbox-center-x object) x)
-  (setf (hitbox-center-y object) y))
+  (setf (center-x object) x)
+  (setf (center-y object) y))
 
 
 ;;; Predicates

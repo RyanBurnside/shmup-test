@@ -5,24 +5,24 @@
 (in-package #:shmup-test)
 
 (defclass game-object (mover)
-  ((HP     :reader   game-object-HP 
+  ((HP     :reader   HP 
 	   :initarg :HP          
 	   :initform 1
 	   :documentation "Health points, dead if <= 0")
-   (hitbox :accessor game-object-hitbox
+   (hitbox :accessor hitbox
 	   :initarg :hitbox 
 	   :initform nil
 	   :documentation "may be nil or a hitbox instance")
-   (dead   :accessor game-object-dead 
+   (dead   :accessor dead 
 	   :initform nil
 	   :documentation "A simple flag for dead object in game")))
 
 (defmethod %hitbox-recenter ((object game-object))
   ;; Hooks hitbox if not nil and repositions it to center
-  (when (typep (game-object-hitbox object) 'hitbox)
-    (set-positionf (game-object-hitbox object)
-		   (mover-x object) 
-		   (mover-y object))))
+  (when (typep (hitbox object) 'hitbox)
+    (set-positionf (hitbox object)
+		   (x object) 
+		   (y object))))
 
 ;; Optional creation function
 (defun make-game-object (x y &key 
@@ -50,12 +50,12 @@
 
 (defmethod %determine-health-dead ((object game-object))
   ;; Sets the dead flag if HP is <= 0
-  (when (<= (game-object-HP object) 0.0)
-    (setf (game-object-dead object) t)))
+  (when (<= (HP object) 0.0)
+    (setf (dead object) t)))
 
 ;;; Getters
 (defmethod get-hitbox ((object game-object))
-  (game-object-hitbox object))
+  (hitbox object))
 
 ;;; Setters
 (defmethod set-HPf ((object game-object) (value number))
@@ -75,11 +75,11 @@
 
 ;;; Predicates
 (defmethod collidep ((object game-object) (object2 game-object))
-  (if (and (typep (game-object-hitbox object) 'hitbox) 
-	   (typep (game-object-hitbox object2) 'hitbox))
+  (if (and (typep (hitbox object) 'hitbox) 
+	   (typep (hitbox object2) 'hitbox))
 
       ;; Both valid hitboxes, return the test results
-      (collidep (game-object-hitbox object) (game-object-hitbox object2))
+      (collidep (hitbox object) (hitbox object2))
 
       ;; One or more is Nil, test returns NIL
       nil))
