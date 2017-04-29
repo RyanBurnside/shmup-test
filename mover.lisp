@@ -6,14 +6,13 @@
 ;; Movers only should expose slots x and y directly
 ;; The rest cause a recalculation of step-x,y
 
-
 (defclass mover ()
   ((x :accessor x :initarg :x :initform 0)
    (y :accessor y :initarg :y :initform 0)
    (step-x :initform 0 :reader step-x) ;hidden
    (step-y :initform 0 :reader step-y) ;hidden
-   (direction :reader direction :initarg :direction :initform 0)
-   (speed :reader speed :initarg :speed :initform 0))
+   (direction :accessor direction :initarg :direction :initform 0)
+   (speed :accessor speed :initarg :speed :initform 0))
   (:documentation "Simple movement component, update with mover stepf"))
 
 ;;; Methods for mover
@@ -34,23 +33,11 @@
 (defmethod location ((object mover)) ;Note, "position" is a resrved word
   (values (x object) (y object)))
 
-(defmethod set-directionf ((object mover) (val number))
-  (setf (slot-value object 'direction) val)
-  (%mover-recalculate object)
-  (direction object))
+(defmethod (setf direction) :after (val (object mover))
+	   (%mover-recalculate object))
 
-(defmethod set-speedf ((object mover) (val number))
-  (setf (slot-value object 'speed) val)
-  (%mover-recalculate object)
-  (speed object))
-
-(defmethod set-xf ((object mover) (val number))
-  (setf (x object) val)
-  (x object))
-
-(defmethod set-yf ((object mover) (val number))
-  (setf (y object) val)
-  (y object))
+(defmethod (setf speed) :after (val (object mover))
+	   (%mover-recalculate object))
 
 (defmethod set-positionf ((object mover) (x number) (y number))
   (set-xf object x)

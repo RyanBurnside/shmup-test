@@ -17,17 +17,14 @@
    (firep  :accessor fire-p  :initform (lambda() nil))
    (bombp  :accessor bomb-p  :initform (lambda() nil))))
 
-
-
 ;; Mutators
-
 (defmethod updatef ((player player))
   ;; Update inputs
   (update-controllsf player)
   ;; Move
   (stepf player)
   ;; Reset speed to 0.0
-  (set-speedf player 0.0)
+  (setf (speed player) 0.0)
   ;; Handle shooting timer
   (when (and (readyp (shot-timer player)) 
 	     (funcall (fire-p player)))
@@ -46,15 +43,15 @@
 	 (y-speed (- d u))
 	 (direction (atan y-speed x-speed)))
     
-    (set-directionf player (atan y-speed x-speed))
+    (setf (direction player) (atan y-speed x-speed))
     
     ;; Set the speed to travelling speed if any direction pressed
     (if (> (+ l r u d) 0.0)
-	(set-speedf player (move-speed player))
-	(set-speedf player 0.0))))
+	(setf (speed player) (move-speed player))
+	(setf (speed player) 0.0))))
 
 (defmethod resetf ((player player))
   (resetf (shot-timer player))
-  (set-speedf player 0.0)
+  (setf (speed player) 0.0)
   (setf (lives player) *starting-lives*)
   (setf (score player) 0))
