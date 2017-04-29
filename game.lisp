@@ -104,7 +104,7 @@ recipient-function,"
 			       (* pi 1.5)
 			       (* pi .1)
 			       (lambda (x y direction)
-				 (shootf game x y direction)))))
+				 (player-shootf game x y direction)))))
 
 
   ;; Should always be the last function executed in init as it starts SDL
