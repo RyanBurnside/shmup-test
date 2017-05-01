@@ -5,10 +5,10 @@
 (in-package #:shmup-test)
 
 (defclass game-object (mover)
-  ((HP     :reader   HP 
+  ((HP     :accessor   HP 
 	   :initarg :HP          
 	   :initform 1
-	   :documentation "Health points, dead if <= 0")
+	   :documentation "Health points, dead if setf <= 0")
    (hitbox :accessor hitbox
 	   :initarg :hitbox 
 	   :initform nil
@@ -54,19 +54,17 @@
     (setf (dead object) t)))
 
 ;;; Getters
-(defmethod get-hitbox ((object game-object))
-  (hitbox object))
+;(defmethod get-hitbox ((object game-object))
+;  (hitbox object))
 
-;;; Setters
-(defmethod set-HPf ((object game-object) (value number))
-  ;; If passed a value <= 0 the dead flag is set to true
-  (setf (slot-value object 'HP) value)
+(defmethod (setf HP) :after (val (object game-object))
   (%determine-health-dead object))
 
-(defmethod set-incf-HPf ((object game-object) (value number))
-  ;; incf for HP adjustments with dead flag hook
-  (incf (slot-value object 'HP) value)
-  (%determine-health-dead object))
+(defmethod (setf x) :after (val (object game-object))
+  (%hitbox-recenter object))
+
+(defmethod (setf y) :after (val (object game-object))
+  (%hitbox-recenter object))
 
 (defmethod stepf :after ((object game-object))
   ;; Reposition the hitbox
