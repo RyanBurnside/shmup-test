@@ -254,19 +254,19 @@ recipient-function,"
 	    (updatef i)))
     (loop for i across player-shots 
        do
-	 (when (not (collidep play-area (get-hitbox i)))
+	 (when (not (collidep play-area (hitbox i)))
 	   (setf (dead i) t))
 	 (unless (dead i)
 	   (stepf i)))
     (loop for i across enemies 
        do
-	 (when (not(collidep play-area (get-hitbox i)))
+	 (when (not(collidep play-area (hitbox i)))
 	   (setf (dead i) t))
 	 (unless (dead i)
 	   (stepf i)))
     (loop for i across enemy-shots 
        do
-	 (when (not (collidep play-area (get-hitbox i)))
+	 (when (not (collidep play-area (hitbox i)))
 	   (setf (dead i) t))
 	 (unless (dead i)
 	   (stepf i)))

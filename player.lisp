@@ -3,10 +3,15 @@
 (defparameter *starting-lives* 3)
 
 (defclass player (game-object)
-  ((lives         :accessor lives :initarg :lives :initform *starting-lives*)
+  ((lives         :accessor lives 
+		  :initarg :lives 
+		  :initform *starting-lives*)
    (score         :accessor score :initform 0)
-   (shot-timer    :accessor shot-timer :initform (make-instance 'ticker :ready-at 3))
-   (shot-function :accessor shot-function :initarg :shot-function :initform (lambda ())
+   (shot-timer    :accessor shot-timer 
+		  :initform (make-instance 'ticker :ready-at 3))
+   (shot-function :accessor shot-function 
+		  :initarg :shot-function 
+		  :initform (lambda ())
 		  :documentation "Action to take upon shot-timer being ready to fire")
    (move-speed :accessor move-speed :initform 3)
    ;; The following should be bound to functions returning true or false

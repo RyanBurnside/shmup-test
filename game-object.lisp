@@ -53,18 +53,20 @@
   (when (<= (HP object) 0.0)
     (setf (dead object) t)))
 
-;;; Getters
-;(defmethod get-hitbox ((object game-object))
-;  (hitbox object))
+ (defmethod (setf HP) (val (object game-object)) 
+   (with-slots (HP) object
+     (setf HP val) 
+     (%determine-health-dead object)))
 
-(defmethod (setf HP) :after (val (object game-object))
-  (%determine-health-dead object))
+ (defmethod (setf x) (val (object game-object)) 
+   (with-slots (x) object
+     (setf x val) 
+     (%hitbox-recenter object)))
 
-(defmethod (setf x) :after (val (object game-object))
-  (%hitbox-recenter object))
-
-(defmethod (setf y) :after (val (object game-object))
-  (%hitbox-recenter object))
+ (defmethod (setf y) (val (object game-object)) 
+   (with-slots (y) object
+     (setf y val) 
+     (%hitbox-recenter object)))
 
 (defmethod stepf :after ((object game-object))
   ;; Reposition the hitbox
