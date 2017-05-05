@@ -16,6 +16,7 @@
 	       (:file "hitbox")
 	       (:file "mover")
 	       (:file "game-object")
+	       (:file "emitter")
 	       (:file "enemy")
 	       (:file "player")
 	       (:file "game")

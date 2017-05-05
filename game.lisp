@@ -4,17 +4,34 @@
 
 
 ;; Accessory defuns
-(defun burst-fire (x y num-shots aim-direction spread recipient-function)
-  "burst-fire will pass the valuex x, y, direction 
+(defun intrpl (p a b)
+  "Return the value at p(0.0 - 1.0) between a and b"
+  (+ a (* (- b a) p)))
+
+(defun burst-fire (&key x y num-shots aim spread func)
+  "burst-fire will pass the value x, y, direction 
 recipient-function,"
   (if (< num-shots 1) (return-from burst-fire))
   (when (= num-shots 1) ; 1 or less shots
-    (funcall recipient-function x y aim-direction)
+    (funcall func x y aim)
     (return-from burst-fire))
-  (let ((start-angle (- aim-direction (* spread .5)))
+  (let ((start-angle (- aim (* spread .5)))
 	(step-angle (/ spread (1- (* 1.0 num-shots)))))
     (dotimes (i num-shots)
-      (funcall recipient-function x y (+ start-angle (* step-angle i))))))
+      (funcall func x y (+ start-angle (* step-angle i))))))
+
+(defun interpolate-burst-fire (p &key x  y  num-shots  aim  spread
+				      x2 y2 num-shots2 aim2 spread2
+				      func)
+  (funcall #'burst-fire 
+	   :x (intrpl p x x2)
+	   :y (intrpl p y y2)
+	   :num-shots (round (intrpl p num-shots num-shots2))
+	   :aim (intrpl p aim aim2)
+	   :spread (intrpl p spread spread2)
+	   :func func))
+
+
 
 (defclass game ()
   ((state        :accessor state :initform 'title)
@@ -78,13 +95,17 @@ recipient-function,"
   (setf (fire-p (aref (players game) 0))
 	(lambda () (sdl:get-key-state :sdl-key-z)))
   (setf (shot-function (aref (players game) 0))
-	(lambda () (burst-fire (x (aref (players game) 0))
-			       (y (aref (players game) 0))
-			       4
-			       (* pi 1.5)
-			       (* pi .1)
-			       (lambda (x y direction)
-				 (player-shootf game x y direction)))))
+	(lambda () (burst-fire :x (x (aref (players game) 0))
+			       :y (y (aref (players game) 0))
+			       :num-shots 4
+			       :aim (* pi 1.5)
+			       :spread (* pi .1)
+			       :func (lambda (x y direction)
+					   (player-shootf 
+					    game 
+					    x 
+					    y 
+					    direction)))))
 
   ;; Bind player 2 actions
   (setf (left-p (aref (players game) 1))
@@ -98,13 +119,13 @@ recipient-function,"
   (setf (fire-p (aref (players game) 1))
 	(lambda () (sdl:get-key-state :sdl-key-lctrl)))
   (setf (shot-function (aref (players game) 1))
-	(lambda () (burst-fire (x (aref (players game) 1))
-			       (y (aref (players game) 1))
-			       4
-			       (* pi 1.5)
-			       (* pi .1)
-			       (lambda (x y direction)
-				 (player-shootf game x y direction)))))
+	(lambda () (burst-fire :x (x (aref (players game) 1))
+			       :y (y (aref (players game) 1))
+			       :num-shots 4
+			       :aim (* pi 1.5)
+			       :spread (* pi .1)
+			       :func (lambda (x y direction)
+				       (player-shootf game x y direction)))))
 
 
   ;; Should always be the last function executed in init as it starts SDL
@@ -167,8 +188,8 @@ recipient-function,"
 
 (defmethod burst-newf ((game game) x y direction)
   (add-enemy-shotf game
-		   (make-game-object (floor (/ (width game) 2))
-				     (floor (* (height game) .33))
+		   (make-game-object (floor x)
+				     (floor y)
 				     :speed 5.0
 				     :direction direction
 				     :width 16
@@ -193,7 +214,7 @@ recipient-function,"
 	 (setf (aref pt 0) (- (floor (x i)) 8))
 	 (setf (aref pt 1) (- (floor (y i)) 8))
 	 (sdl:draw-surface-at (game-bullet-images game) pt 
-			      :cell (+ 24 (random 5))
+			      :cell 6
 			      :surface (game-screen-buffer game)))
     (loop for i across (player-shots game) 
        do
@@ -223,7 +244,7 @@ recipient-function,"
 
 (defmethod reset-gamef ((game game))
   "Reset the game to default state"
-  (setf (game-state game) 'title)
+  (setf (state game) 'title)
   (reset-fill-vectorf (player-shots game))
   (reset-fill-vectorf (enemy-shots game))
   (reset-fill-vectorf (enemies game)))
@@ -231,6 +252,43 @@ recipient-function,"
 (defmethod reset-fill-vectorf ((vec vector))
   "Set the fill pointer to 0, prepare to stomp over old values"
   (setf (fill-pointer vec) 0))
+
+
+
+(defparameter *dummy-timer* (make-ticker :ready-at 299))
+(defmethod dummy-shot-test ((game game))
+  (when (readyp *dummy-timer*)
+    (resetf *dummy-timer*))
+  (let* ((x (* (width game) .5))
+	 (y (* (height game) .5))
+	 (spread PI)
+	 (direction (* PI .5))
+	 (num-shots 6)
+	 (val (value *dummy-timer*))
+	 (maxv (ready-at *dummy-timer*))
+	 (tau (* PI 2.0))
+	 (percent (/ val maxv)))
+	  
+
+    (setf direction (* .3 val))	  
+    (setf spread tau)
+
+    (interpolate-burst-fire percent
+			    :x 0
+			    :y 0
+			    :num-shots 3
+			    :aim (* TAU 100)
+			    :spread TAU
+			    
+			    :x2 (width game)
+			    :y2 y
+			    :num-shots2 3
+			    :aim2 0.0
+			    :spread2 TAU
+			    
+			    :func (lambda (xx yy direction) 
+				    (burst-newf game xx yy direction)))
+    (tickf *dummy-timer*)))
 
 (defmethod stepf ((game game))
   "Main step function for the game"
@@ -241,14 +299,7 @@ recipient-function,"
 		   (enemy-shots enemy-shots)
 		   (play-area play-area))
       game
-    (burst-fire (* (width game) .5)
-		(* (height game) .5)
-		1
-		(random (* 2 PI))
-		1
-		(lambda (x y direction) 
-		  (burst-newf game x y direction)))
-
+    (dummy-shot-test game)
     (loop for i across players 
        do (unless (dead i)
 	    (updatef i)))

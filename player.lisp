@@ -8,7 +8,7 @@
 		  :initform *starting-lives*)
    (score         :accessor score :initform 0)
    (shot-timer    :accessor shot-timer 
-		  :initform (make-instance 'ticker :ready-at 3))
+		  :initform (make-instance 'ticker :ready-at 10))
    (shot-function :accessor shot-function 
 		  :initarg :shot-function 
 		  :initform (lambda ())
@@ -21,6 +21,15 @@
    (downp  :accessor down-p  :initform (lambda() nil))
    (firep  :accessor fire-p  :initform (lambda() nil))
    (bombp  :accessor bomb-p  :initform (lambda() nil))))
+
+
+(defmethod modify-entity ((entity player))
+;; set the player's rate of fire to 5. we can change this while the game is running, and then hit C-c C-c to see the
+;; change happen immediately in game.
+(setf (move-speed entity) 15.0)
+;; you probably want to make an entity class and make the player have this as a parent. then this method would look
+;; like (entity entity) to change something common to all entities.
+)
 
 ;; Mutators
 (defmethod updatef ((player player))
@@ -54,6 +63,7 @@
     (if (> (+ l r u d) 0.0)
 	(setf (speed player) (move-speed player))
 	(setf (speed player) 0.0))))
+
 
 (defmethod resetf ((player player))
   (resetf (shot-timer player))

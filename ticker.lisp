@@ -3,9 +3,13 @@
 ;;TODO MAKE MAKE-COPY METHOD
 
 (defclass ticker ()
-  ((value :accessor value :initform 0)
-   (ready-at :accessor ready-at :initform 0 :initarg :ready-at))
+  ((value :accessor value :initform 0 :initarg :value)
+   (ready-at :accessor ready-at :initform 0 :initarg :ready-at 
+	     :documentation "Stop counting upon reaching this value, set to -1 to tick forever"))
   (:documentation "A class that ticks from 0 to ready-at then stops"))
+
+(defun make-ticker (&key ((:value a) 0) ((:ready-at b) 0))
+  (make-instance 'ticker :value a :ready-at b))
 
 (defmethod readyp ((ticker ticker))
   (= (value ticker)

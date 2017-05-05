@@ -33,15 +33,15 @@
 (defmethod location ((object mover)) ;Note, "position" is a resrved word
   (values (x object) (y object)))
 
- (defmethod (setf direction) (val (object mover)) 
-   (with-slots (direction) object 
-     (setf direction val) 
-     (%mover-recalculate object)))
+(defmethod (setf direction) (val (object mover)) 
+  (with-slots (direction) object 
+    (setf direction val) 
+    (%mover-recalculate object)))
 
- (defmethod (setf speed) (val (object mover)) 
-   (with-slots (speed) object 
-     (setf speed val) 
-     (%mover-recalculate object)))
+(defmethod (setf speed) (val (object mover)) 
+  (with-slots (speed) object 
+    (setf speed val) 
+    (%mover-recalculate object)))
 
 (defmethod set-positionf ((object mover) (x number) (y number))
   (setf (x object) x)
@@ -53,4 +53,4 @@
   (incf (y object) (step-y object)))
 
 
-;; TODO additional types of mover aka spline also waypoint
+;; TODO additional types of mover aka steering based (Nature of Code book)
