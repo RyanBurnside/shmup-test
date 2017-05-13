@@ -34,7 +34,7 @@ recipient-function,"
 
 
 (defclass game ()
-  ((state        :accessor state :initform 'title)
+  ((state   :accessor state :initform 'title)
 
    (players :accessor players
 	    :initform (make-array  1 :fill-pointer 0 :adjustable t)
@@ -81,7 +81,10 @@ recipient-function,"
     (add-playerf game
 		 (make-instance 'player 
 				:x (random (width game))
-				:y (random (height game)))))
+				:y (random (height game))
+				:hitbox (make-instance 'hitbox
+						       :width 8
+						       :height 10))))
 
   ;; Bind player 1 actions
   (setf (left-p (aref (players game) 0))
@@ -205,21 +208,32 @@ recipient-function,"
 				      :height 16)))
 
 
+(defmethod draw-hitbox ((game game) (hitbox hitbox))
+  (let ((xx (- (center-x hitbox) (/ (width hitbox) 2.0)))
+	(yy (- (center-y hitbox) (/ (height hitbox) 2.0))))
+    (sdl:draw-rectangle-*  (round xx) 
+			   (round yy) 
+			   (width hitbox)
+			   (height hitbox)
+			   :surface (game-screen-buffer game)
+			   :color sdl:*white*)))
+
 (defmethod draw-gamef ((game game))
   "Main method for drawing game"
   (sdl:clear-display sdl:*black* :surface (game-screen-buffer game))
   (let ((pt (sdl:point)))
     (loop for i across (enemy-shots game) 
        do
-	 (setf (aref pt 0) (- (floor (x i)) 8))
-	 (setf (aref pt 1) (- (floor (y i)) 8))
+	 (setf (aref pt 0) (- (round (x i)) 8))
+	 (setf (aref pt 1) (- (round (y i)) 8))
 	 (sdl:draw-surface-at (game-bullet-images game) pt 
 			      :cell 6
-			      :surface (game-screen-buffer game)))
+			      :surface (game-screen-buffer game))
+	 (draw-hitbox game (hitbox i)))
     (loop for i across (player-shots game) 
        do
-	 (setf (aref pt 0) (- (floor (x i)) 8))
-	 (setf (aref pt 1) (- (floor (y i)) 8))
+	 (setf (aref pt 0) (- (round (x i)) 8))
+	 (setf (aref pt 1) (- (round (y i)) 8))
 	 (sdl:draw-surface-at (game-bullet-images game) 
 			      pt 
 			      :cell 102 
@@ -227,9 +241,10 @@ recipient-function,"
     (loop for p across (players game)
        do
 	 (sdl:draw-surface-at-* (game-player-image game)
-				(- (floor (x p)) 16)
-				(- (floor (y p)) 16)
-				:surface (game-screen-buffer game))))
+				(- (round (x p)) 16)
+				(- (round (y p)) 16)
+				:surface (game-screen-buffer game))
+	 (draw-hitbox game (hitbox p))))
 
   (sdl:draw-surface-at-* (game-screen-buffer game) 0 0))
 
@@ -252,8 +267,6 @@ recipient-function,"
 (defmethod reset-fill-vectorf ((vec vector))
   "Set the fill pointer to 0, prepare to stomp over old values"
   (setf (fill-pointer vec) 0))
-
-
 
 (defparameter *dummy-timer* (make-ticker :ready-at 299))
 (defmethod dummy-shot-test ((game game))
@@ -319,6 +332,12 @@ recipient-function,"
        do
 	 (when (not (collidep play-area (hitbox i)))
 	   (setf (dead i) t))
+
+	 (loop for p across players 
+	    do
+	      (and (collidep (hitbox i) (hitbox p))
+		(setf (dead i) t)))
+
 	 (unless (dead i)
 	   (stepf i)))
     

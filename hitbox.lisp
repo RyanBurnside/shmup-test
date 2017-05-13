@@ -39,12 +39,6 @@
   (setf (width object) width)
   (setf (height object) height))
 
-(defmethod set-xf ((entity hitbox) (value number))
-  (setf (center-x entity) value))
-
-(defmethod set-yf ((entity hitbox) (value number))
-  (setf (center-y entity) value))
-
 (defmethod set-positionf ((object hitbox) (x number)  (y number))
   (setf (center-x object) x)
   (setf (center-y object) y))

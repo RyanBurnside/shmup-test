@@ -55,7 +55,9 @@
 	 (d (if (funcall (down-p player)) 1 0))
 	 (x-speed (- r l))
 	 (y-speed (- d u))
-	 (direction (atan y-speed x-speed)))
+	 (direction (if (not (and (= x-speed 0) (= y-speed 0)))
+			(atan y-speed x-speed)
+			0.0)))
     
     (setf (direction player) (atan y-speed x-speed))
     

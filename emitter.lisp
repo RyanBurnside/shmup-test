@@ -38,10 +38,9 @@ and get the player's direction for aiming")
 
 (defmethod get-largest-key ((emitter emitter))
   "Returns 0 if no key exists else returns largest key"
-  (let ((val (loop for key being the hash-keys of (action-map emitter) collect key)))
-    (if val
-	(apply #'min val)
-	0)))
+  (let ((val (loop for key being the hash-keys of (action-map emitter) maximize key)))
+    ;sbcl will use 0 for empty list clisp uses NIL
+    (if val val 0)))
 
 (defmethod push-burst ((emitter emitter) &key (step 0) (relative t) num-shots speed spread (aim (* PI .5)))
   "Inserts a burst parameter list into an emitter, 
@@ -60,6 +59,7 @@ previous data held at index step"
 		:aim aim))))
 
 (defmethod stepf ((emitter emitter))
+  ;; If the tick value matches a key call the bound burst function with plist
   (when (gethash (value emitter))
     (let ((h (gethash (value emitter))))
       (funcall (shot-push-func emitter) 
@@ -69,4 +69,11 @@ previous data held at index step"
 	       :speed (getf h :speed)
 	       :spread (getf h :spread)
 	       :num-shots (getf h :num-shots))))
+
+  ;; Now see if the tick count needs to reset
+  (when (= (get-largest-key emitter) (value emitter))
+    (if (repeating emitter)
+	(reset emitter)
+	(setf (ready-at emitter) -1)))
+      
   (tickf emitter))
