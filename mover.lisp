@@ -15,6 +15,9 @@
    (speed :accessor speed :initarg :speed :initform 0))
   (:documentation "Simple movement component, update with mover stepf"))
 
+(defun make-mover (x y speed direction)
+  (make-instance 'mover :x x :y y :speed speed :direction direction))
+
 ;;; Methods for mover
 (defmethod initialize-instance :after ((object mover) &key)
   (%mover-recalculate object))

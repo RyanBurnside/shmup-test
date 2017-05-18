@@ -10,7 +10,7 @@ actions depending on how long it has lived")
 
 (defmethod stepf :after ((enemy enemy))
   ;; Update all emitter positions with new parent x and y
-  (for i in (emitters enemy) do
+  (loop for i in (emitters enemy) do
        ;; Update emitters' parent x,y
        (setf (parent-x i) (x enemy))
        (setf (parent-y i) (y enemy))

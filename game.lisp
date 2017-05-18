@@ -33,6 +33,7 @@ recipient-function,"
 
 
 
+
 (defclass game ()
   ((state   :accessor state :initform 'title)
 
@@ -52,11 +53,7 @@ recipient-function,"
 		 :initform  (make-array 1 :fill-pointer 0 :adjustable t)
 		 :documentation "A vector allowed to grow as needed")
 
-   (play-area :accessor play-area :initform (make-instance 'hitbox 
-							   :center-x 120
-							   :center-y 160
-							   :width 240
-							   :height 320)
+   (play-area :accessor play-area :initform (make-hitbox 240 320 120 160)
 	      :documentation "Hitbox for defining play area")
 
    ;; Some sprite related routines
@@ -67,24 +64,18 @@ recipient-function,"
    (bullet-images :accessor game-bullet-images)
    (bullet-images-cells :accessor game-bullet-images-cells)))
 
-(defmethod initialize-instance :after ((game game) 
-				       &key 
-					 (width 600)
-					 (height 800))
+(defmethod initialize-instance :after ((game game) &key 
+				       (width 600) 
+				       (height 800))
   (setf (play-area game)
-	(make-instance 'hitbox 
-		       :width width 
-		       :height height
-		       :center-x (/ width 2)
-		       :center-y (/ height 2)))
+	(make-hitbox width height (/ width 2) (/ height 2)))
+
   (dotimes (i 2)
     (add-playerf game
 		 (make-instance 'player 
 				:x (random (width game))
 				:y (random (height game))
-				:hitbox (make-instance 'hitbox
-						       :width 8
-						       :height 10))))
+				:hitbox (make-hitbox 8 10))))
 
   ;; Bind player 1 actions
   (setf (left-p (aref (players game) 0))
@@ -98,9 +89,20 @@ recipient-function,"
   (setf (fire-p (aref (players game) 0))
 	(lambda () (sdl:get-key-state :sdl-key-z)))
   (setf (shot-function (aref (players game) 0))
-	(lambda () (burst-fire :x (x (aref (players game) 0))
+	(lambda () (burst-fire :x (- (x (aref (players game) 0)) 8)
 			       :y (y (aref (players game) 0))
-			       :num-shots 4
+			       :num-shots 3
+			       :aim (* pi 1.5)
+			       :spread (* pi .1)
+			       :func (lambda (x y direction)
+					   (player-shootf 
+					    game 
+					    x 
+					    y 
+					    direction)))
+		   (burst-fire :x (+ (x (aref (players game) 0)) 8)
+			       :y (y (aref (players game) 0))
+			       :num-shots 3
 			       :aim (* pi 1.5)
 			       :spread (* pi .1)
 			       :func (lambda (x y direction)
@@ -124,7 +126,7 @@ recipient-function,"
   (setf (shot-function (aref (players game) 1))
 	(lambda () (burst-fire :x (x (aref (players game) 1))
 			       :y (y (aref (players game) 1))
-			       :num-shots 4
+			       :num-shots 1
 			       :aim (* pi 1.5)
 			       :spread (* pi .1)
 			       :func (lambda (x y direction)
@@ -132,41 +134,54 @@ recipient-function,"
 
 
   ;; Should always be the last function executed in init as it starts SDL
-  (sdl:load-library) ;; DO NOT APPEND BELOW THIS LINE
-  (sdl:with-init () (sdl:window 
-		     240
-		     320
-		     :title-caption "Shmup Test"
-		     :DOUBLE-BUFFER T)
-		 (setf (sdl:frame-rate) 60)
-		 ;; Create screen buffer 240x320
-		 (setf (game-screen-buffer game)
-		       (sdl:create-surface 240 320))
+  (sdl:load-library) ;; DO NOT APPEND BELOW THIS FORM
+  (sdl:with-init () 
+    (sdl:window  240 320 :title-caption "Shmup Test" :DOUBLE-BUFFER T)
+    (setf (sdl:frame-rate) 60)
+    ;; Create screen buffer 240x320
+    (setf (game-screen-buffer game)
+	  (sdl:create-surface 240 320))
+    
+    ;; Load bullet sprite sheet
+    (setf (game-bullet-images game)
+	  (sdl-image:load-image 
+	   "Resources/Sprites/shots.gif" 
+	   :image-type :GIF :force t :color-key-at #(0 0)))
+    ;; Create cells for bullet sprite sheet
+    (setf (game-bullet-images-cells game)
+	  (loop for y from 0 to (- 192 16) by 16
+	     append (loop for x from 0 to (- 192 16) by 16
+		       collect (list x y 16 16))))
+    ;; Assign cells to bullet sprite sheet  
+    (setf (sdl:cells (game-bullet-images game))
+	  (game-bullet-images-cells game))
+    
+    (setf (game-player-image game)
+	  (sdl-image:load-image 
+	   "Resources/Sprites/ships.gif" 
+	   :image-type :GIF :force t :color-key-at #(0 0)))
+    ;; Test case code
+    (testing-setup game)
+    ;; End test case code
+    (sdl:with-events ()
+      (:quit-event () t)
+      (:idle ()
+	     (sdl:clear-display sdl:*black*)
+	     (stepf game)
+	     (sdl:update-display)))))
 
-		 ;; Load bullet sprite sheet
-		 (setf (game-bullet-images game)
-		       (sdl-image:load-image 
-			"Resources/Sprites/shots.gif" 
-			:image-type :GIF :force t :color-key-at #(0 0)))
-		 ;; Create cells for bullet sprite sheet
-		 (setf (game-bullet-images-cells game)
-		       (loop for y from 0 to (- 192 16) by 16
-			  append (loop for x from 0 to (- 192 16) by 16
-				    collect (list x y 16 16))))
-		 ;; Assign cells to bullet sprite sheet  
-		 (setf (sdl:cells (game-bullet-images game))
-		       (game-bullet-images-cells game))
-		 
-		 (setf (game-player-image game)
-		       (sdl-image:load-image 
-			"Resources/Sprites/ships.gif" 
-			:image-type :GIF :force t :color-key-at #(0 0)))
-		 (sdl:with-events ()
-		   (:quit-event () t)
-		   (:idle ()
-			  (sdl:clear-display sdl:*black*)
-			  (stepf game)
-			  (sdl:update-display)))))
+
+(defmethod testing-setup ((game game))
+  ;; Dummy function to set up test scenarios
+  (let ((e (make-instance 'enemy :x 120 :y 64))
+	(em (make-instance 'emitter :repeating t)))
+    (setf (hitbox e) (make-hitbox 32 32 (x e) (y e)))
+    (setf (speed e) .5)
+    (setf (direction e) (* PI .5))
+    (add-enemyf game e))
+
+)
+
 
 ;;; getters
 (defmethod width ((game game))
@@ -202,21 +217,23 @@ recipient-function,"
   (add-player-shotf game
 		    (make-game-object x
 				      y
-				      :speed 10.0
+				      :speed 14.0
 				      :direction direction
 				      :width 16
 				      :height 16)))
 
-
 (defmethod draw-hitbox ((game game) (hitbox hitbox))
-  (let ((xx (- (center-x hitbox) (/ (width hitbox) 2.0)))
-	(yy (- (center-y hitbox) (/ (height hitbox) 2.0))))
-    (sdl:draw-rectangle-*  (round xx) 
-			   (round yy) 
-			   (width hitbox)
-			   (height hitbox)
-			   :surface (game-screen-buffer game)
-			   :color sdl:*white*)))
+  (with-accessors ((w width) 
+		   (h height) 
+		   (cen-x center-x) 
+		   (cen-y center-y))
+                  hitbox
+      (sdl:draw-rectangle-*  (round (- cen-x (/ w 2.0)))
+			     (round (- cen-y (/ h 2.0))) 
+			     w
+			     h
+			     :surface (game-screen-buffer game)
+			     :color sdl:*green*)))
 
 (defmethod draw-gamef ((game game))
   "Main method for drawing game"
@@ -236,7 +253,7 @@ recipient-function,"
 	 (setf (aref pt 1) (- (round (y i)) 8))
 	 (sdl:draw-surface-at (game-bullet-images game) 
 			      pt 
-			      :cell 102 
+			      :cell 1
 			      :surface (game-screen-buffer game)))
     (loop for p across (players game)
        do
@@ -244,7 +261,13 @@ recipient-function,"
 				(- (round (x p)) 16)
 				(- (round (y p)) 16)
 				:surface (game-screen-buffer game))
-	 (draw-hitbox game (hitbox p))))
+	 (draw-hitbox game (hitbox p)))
+
+    (loop for e across (enemies game)
+       do
+	 (draw-hitbox game (hitbox e))))
+
+
 
   (sdl:draw-surface-at-* (game-screen-buffer game) 0 0))
 
@@ -268,40 +291,6 @@ recipient-function,"
   "Set the fill pointer to 0, prepare to stomp over old values"
   (setf (fill-pointer vec) 0))
 
-(defparameter *dummy-timer* (make-ticker :ready-at 299))
-(defmethod dummy-shot-test ((game game))
-  (when (readyp *dummy-timer*)
-    (resetf *dummy-timer*))
-  (let* ((x (* (width game) .5))
-	 (y (* (height game) .5))
-	 (spread PI)
-	 (direction (* PI .5))
-	 (num-shots 6)
-	 (val (value *dummy-timer*))
-	 (maxv (ready-at *dummy-timer*))
-	 (tau (* PI 2.0))
-	 (percent (/ val maxv)))
-	  
-
-    (setf direction (* .3 val))	  
-    (setf spread tau)
-
-    (interpolate-burst-fire percent
-			    :x 0
-			    :y 0
-			    :num-shots 3
-			    :aim (* TAU 100)
-			    :spread TAU
-			    
-			    :x2 (width game)
-			    :y2 y
-			    :num-shots2 3
-			    :aim2 0.0
-			    :spread2 TAU
-			    
-			    :func (lambda (xx yy direction) 
-				    (burst-newf game xx yy direction)))
-    (tickf *dummy-timer*)))
 
 (defmethod stepf ((game game))
   "Main step function for the game"
@@ -312,7 +301,6 @@ recipient-function,"
 		   (enemy-shots enemy-shots)
 		   (play-area play-area))
       game
-    (dummy-shot-test game)
     (loop for i across players 
        do (unless (dead i)
 	    (updatef i)))

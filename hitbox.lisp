@@ -9,6 +9,14 @@
    (height   :accessor height   :initarg :height))
   (:documentation "A hitbox class for collision checking"))
 
+
+(defun make-hitbox (w h &optional (cen-x 0) (cen-y 0))
+  (make-instance 'hitbox 
+		 :center-x cen-x
+		 :center-y cen-y
+		 :width w
+		 :height h))
+
 ;;; Getters
 (defmethod half-width ((object hitbox))  
   (* (width object) .5))

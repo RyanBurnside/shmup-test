@@ -8,7 +8,7 @@
 		  :initform *starting-lives*)
    (score         :accessor score :initform 0)
    (shot-timer    :accessor shot-timer 
-		  :initform (make-instance 'ticker :ready-at 10))
+		  :initform (make-instance 'ticker :ready-at 3))
    (shot-function :accessor shot-function 
 		  :initarg :shot-function 
 		  :initform (lambda ())

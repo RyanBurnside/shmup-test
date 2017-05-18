@@ -32,11 +32,7 @@
 			       (height nil))
     (make-instance 'game-object
      :hitbox (if (and (numberp width) (numberp height))
-		 (make-instance 'hitbox
-				:center-x x
-				:center-y y
-				:width width
-				:height height)
+		 (make-hitbox width height x y)
 		 nil)
      :x x
      :y y
@@ -67,6 +63,11 @@
    (with-slots (y) object
      (setf y val) 
      (%hitbox-recenter object)))
+
+(defmethod (setf hitbox) (val (object game-object))
+    (with-slots (hitbox) object
+      (setf hitbox val)
+      (%hitbox-recenter object)))  
 
 (defmethod stepf :after ((object game-object))
   ;; Reposition the hitbox
