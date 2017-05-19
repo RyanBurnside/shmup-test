@@ -8,31 +8,29 @@
   "Return the value at p(0.0 - 1.0) between a and b"
   (+ a (* (- b a) p)))
 
-(defun burst-fire (&key x y num-shots aim spread func)
-  "burst-fire will pass the value x, y, direction 
+(defun burst-fire (&key x y num-shots direction speed spread func)
+  "burst-fire will pass the value x, y, direction, speed
 recipient-function,"
   (if (< num-shots 1) (return-from burst-fire))
   (when (= num-shots 1) ; 1 or less shots
-    (funcall func x y aim)
+    (funcall func x y direction speed)
     (return-from burst-fire))
-  (let ((start-angle (- aim (* spread .5)))
+  (let ((start-angle (- direction (* spread .5)))
 	(step-angle (/ spread (1- (* 1.0 num-shots)))))
     (dotimes (i num-shots)
-      (funcall func x y (+ start-angle (* step-angle i))))))
+      (funcall func x y (+ start-angle (* step-angle i)) speed))))
 
-(defun interpolate-burst-fire (p &key x  y  num-shots  aim  spread
-				      x2 y2 num-shots2 aim2 spread2
+(defun interpolate-burst-fire (p &key x  y  num-shots  direction  speed spread
+				      x2 y2 num-shots2 direction2 speed2 spread2
 				      func)
   (funcall #'burst-fire 
 	   :x (intrpl p x x2)
 	   :y (intrpl p y y2)
 	   :num-shots (round (intrpl p num-shots num-shots2))
-	   :aim (intrpl p aim aim2)
+	   :direction (intrpl p aim aim2)
+	   :speed (interpl p speed speed2)
 	   :spread (intrpl p spread spread2)
 	   :func func))
-
-
-
 
 (defclass game ()
   ((state   :accessor state :initform 'title)
@@ -89,29 +87,16 @@ recipient-function,"
   (setf (fire-p (aref (players game) 0))
 	(lambda () (sdl:get-key-state :sdl-key-z)))
   (setf (shot-function (aref (players game) 0))
-	(lambda () (burst-fire :x (- (x (aref (players game) 0)) 8)
-			       :y (y (aref (players game) 0))
-			       :num-shots 3
-			       :aim (* pi 1.5)
-			       :spread (* pi .1)
-			       :func (lambda (x y direction)
-					   (player-shootf 
-					    game 
-					    x 
-					    y 
-					    direction)))
-		   (burst-fire :x (+ (x (aref (players game) 0)) 8)
-			       :y (y (aref (players game) 0))
-			       :num-shots 3
-			       :aim (* pi 1.5)
-			       :spread (* pi .1)
-			       :func (lambda (x y direction)
-					   (player-shootf 
-					    game 
-					    x 
-					    y 
-					    direction)))))
-
+	(lambda ()
+	  (let* ((p (aref (players game) 0))
+		 (p-x (x p))
+		 (p-y (y P)))
+	    (add-player-shotf game (make-game-object p-x
+						     p-y
+						     :speed 14
+						     :direction (* PI 1.5)
+						     :width 16
+						     :height 16)))))
   ;; Bind player 2 actions
   (setf (left-p (aref (players game) 1))
 	(lambda () (sdl:get-key-state :sdl-key-a)))
@@ -127,10 +112,11 @@ recipient-function,"
 	(lambda () (burst-fire :x (x (aref (players game) 1))
 			       :y (y (aref (players game) 1))
 			       :num-shots 1
-			       :aim (* pi 1.5)
+			       :direction (* pi 1.5)
 			       :spread (* pi .1)
-			       :func (lambda (x y direction)
-				       (player-shootf game x y direction)))))
+			       :speed 14
+			       :func (lambda (x y direction speed)
+				       (player-shootf game x y direction speed)))))
 
 
   ;; Should always be the last function executed in init as it starts SDL
@@ -170,17 +156,38 @@ recipient-function,"
 	     (stepf game)
 	     (sdl:update-display)))))
 
-
 (defmethod testing-setup ((game game))
   ;; Dummy function to set up test scenarios
-  (let ((e (make-instance 'enemy :x 120 :y 64))
-	(em (make-instance 'emitter :repeating t)))
-    (setf (hitbox e) (make-hitbox 32 32 (x e) (y e)))
-    (setf (speed e) .5)
-    (setf (direction e) (* PI .5))
-    (add-enemyf game e))
+  (let* ((e (make-instance 'enemy :x 120 :y 64 :speed 0.1))
+	 (em-f (lambda (x y direction speed)
+		 (enemy-shootf game x y direction speed)))
 
-)
+	 (em (make-instance 'emitter :repeating t :offset-x 16))
+	 (em2 (make-instance 'emitter :repeating t :offset-x -16)))
+
+    (setf (shot-push-func em)
+	  (lambda (&key x y num-shots direction speed spread)
+	    (burst-fire :x x
+			:y y
+			:num-shots num-shots 
+			:direction direction 
+			:speed speed
+			:spread spread
+			:func em-f)))
+    (dotimes (i 3)
+      (push-burst em :spread (* PI 2.0) :speed 3 :num-shots 16 :step 10)
+      (push-burst em2 :spread (* PI 2.0) :speed 3 :num-shots 16 :step 10))
+
+    (dotimes (i 10)
+      (push-burst em :direction 0 :spread (* i 1.4) :speed 5 :num-shots i :step 10)
+      (push-burst em2 :direction PI :spread (* i 1.4) :speed 5 :num-shots i :step 10))
+
+    (setf (hitbox e) (make-hitbox 32 32 (x e) (y e)))
+    (setf (direction e) (* PI .5))
+    (setf (emitters e) (list em em2))
+  
+    (add-enemyf game e)
+))
 
 
 ;;; getters
@@ -204,20 +211,20 @@ recipient-function,"
 (defmethod add-player-shotf ((game game) (player-shot game-object))
   (vector-push-extend player-shot (player-shots game)))
 
-(defmethod burst-newf ((game game) x y direction)
+(defmethod enemy-shootf ((game game) x y direction speed)
   (add-enemy-shotf game
-		   (make-game-object (floor x)
-				     (floor y)
-				     :speed 5.0
+		   (make-game-object x
+				     y
+				     :speed speed
 				     :direction direction
-				     :width 16
-				     :height 16)))
+				     :width 8
+				     :height 8)))
 
-(defmethod player-shootf ((game game) x y direction)
+(defmethod player-shootf ((game game) x y direction speed)
   (add-player-shotf game
 		    (make-game-object x
 				      y
-				      :speed 14.0
+				      :speed speed
 				      :direction direction
 				      :width 16
 				      :height 16)))
@@ -244,7 +251,7 @@ recipient-function,"
 	 (setf (aref pt 0) (- (round (x i)) 8))
 	 (setf (aref pt 1) (- (round (y i)) 8))
 	 (sdl:draw-surface-at (game-bullet-images game) pt 
-			      :cell 6
+			      :cell 20
 			      :surface (game-screen-buffer game))
 	 (draw-hitbox game (hitbox i)))
     (loop for i across (player-shots game) 

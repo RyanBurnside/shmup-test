@@ -1,30 +1,30 @@
 (in-package #:shmup-test)
 
-
 (defclass emitter (ticker)
-  ((parent-x :accessor parent-x :initform 0)
+  ((parent-x :accessor parent-x
+	     :initarg :parent-x
+	     :initform 0)
 
-   (parent-y :accessor parent-y :initform 0)
+   (parent-y :accessor parent-y 
+	     :initarg :parent-y
+	     :initform 0)
 
    (action-map :accessor action-map
 	       :initarg :action-map
 	       :initform (make-hash-table :test #'equalp)
-	       :documentation "A hash with int keys, burst shot parameters 
-mapped to key")
+	       :documentation "A hash with int keys, burst shot parameters mapped to key")
 
    (shot-push-func :accessor shot-push-func
 		   :initarg :shot-push-func
-		   :initform (lambda (&key x y aim speed num-shots spread))
+		   :initform (lambda (&key x y direction speed num-shots spread))
 		   :allocation :class
-		   :documentation "Function to push x y speed direction spread 
-into for a new shot to be created")
+		   :documentation "Function to push x y speed direction spread into for a new shot to be created")
 
    (aim-player-func :accessor aim-player-func
 		    :initarg :aim-player-func
 		    :initform (lambda (x y) (* PI .5))
 		    :allocation :class
-		    :documentation "Function to pass the emitter's x and y, 
-and get the player's direction for aiming")
+		    :documentation "Function to pass the emitter's x and y, and get the player's direction for aiming")
 
    (offset-x :accessor offset-x :initarg :offset-x :initform 0
 	     :documentation "Mounted position relative to enemy object")
@@ -42,7 +42,7 @@ and get the player's direction for aiming")
     ;sbcl will use 0 for empty list clisp uses NIL
     (if val val 0)))
 
-(defmethod push-burst ((emitter emitter) &key (step 0) (relative t) num-shots speed spread (aim (* PI .5)))
+(defmethod push-burst ((emitter emitter) &key (step 0) (relative t) num-shots speed spread (direction (* PI .5)))
   "Inserts a burst parameter list into an emitter, 
 aim may be a direction or :player to call the assigned player targeting 
 function. Step is the current index which is inserted by adding on to the last 
@@ -52,28 +52,40 @@ previous data held at index step"
 	 (index (if relative 
 		    (+ largest step)
 		    step)))
-    (setf (gethash index (action-list emitter))
+    (setf (gethash index (action-map emitter))
 	  (list :num-shots num-shots
 		:spread spread
-		:speed spead
-		:aim aim))))
+		:speed speed
+		:direction direction))
+    (setf (ready-at emitter) (get-largest-key emitter))))
 
 (defmethod stepf ((emitter emitter))
-  ;; If the tick value matches a key call the bound burst function with plist
-  (when (gethash (value emitter))
-    (let ((h (gethash (value emitter))))
-      (funcall (shot-push-func emitter) 
-	       :x (+ parent-x offset-x)
-	       :y (+ parent-y offset-y)
-	       :aim (getf h :aim)
-	       :speed (getf h :speed)
-	       :spread (getf h :spread)
-	       :num-shots (getf h :num-shots))))
+  (with-accessors ((value value) 
+		   (action-map action-map)
+		   (parent-x parent-x)
+		   (parent-y parent-y)
+		   (offset-x offset-x)
+		   (offset-y offset-y)
+		   (ready-at ready-at)
+		   (shot-push-func shot-push-func)
+		   (repeating repeating))
+                   emitter
 
+  ;; If the tick value matches a key call the bound burst function with plist
+  (when (gethash value action-map)
+    (let ((h (gethash value action-map)))
+      (funcall shot-push-func
+       :x (+ parent-x offset-x)
+       :y (+ parent-y offset-y)
+       :direction (getf h :direction)
+       :speed (getf h :speed)
+       :spread (getf h :spread)
+       :num-shots (getf h :num-shots))))
+  
   ;; Now see if the tick count needs to reset
-  (when (= (get-largest-key emitter) (value emitter))
-    (if (repeating emitter)
-	(reset emitter)
-	(setf (ready-at emitter) -1)))
-      
-  (tickf emitter))
+  (when (= ready-at value)
+    (if repeating
+	(resetf emitter)
+	(setf ready-at -1)))
+
+  (tickf emitter)))

@@ -8,7 +8,7 @@
 		  :initform *starting-lives*)
    (score         :accessor score :initform 0)
    (shot-timer    :accessor shot-timer 
-		  :initform (make-instance 'ticker :ready-at 3))
+		  :initform (make-instance 'ticker :ready-at 1))
    (shot-function :accessor shot-function 
 		  :initarg :shot-function 
 		  :initform (lambda ())
@@ -31,7 +31,6 @@
 ;; like (entity entity) to change something common to all entities.
 )
 
-;; Mutators
 (defmethod updatef ((player player))
   ;; Update inputs
   (update-controllsf player)
@@ -49,7 +48,7 @@
       (tickf (shot-timer player))))
 
 (defmethod update-controllsf ((player player))
-  (let* ((l (if (funcall (left-p player)) 1 0))
+  (let* ((l (if (funcall (left-p player)) 1 0)) 
 	 (r (if (funcall (right-p player)) 1 0))
 	 (u (if (funcall (up-p player)) 1 0))
 	 (d (if (funcall (down-p player)) 1 0))

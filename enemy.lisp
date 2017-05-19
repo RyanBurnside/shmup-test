@@ -16,5 +16,4 @@ actions depending on how long it has lived")
        (setf (parent-y i) (y enemy))
        ;; Update emitters
        (stepf i))
-
   (tickf (ticks enemy)))
