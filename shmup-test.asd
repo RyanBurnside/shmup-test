@@ -9,7 +9,8 @@
   :license "GPL whatever"
   :serial t
   :depends-on (#:lispbuilder-sdl 
-	       #:lispbuilder-sdl-image)
+	       #:lispbuilder-sdl-image
+	       #:alexandria)
   :components (
 	       (:file "package")
 	       (:file "score-table")

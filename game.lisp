@@ -9,16 +9,40 @@
   (+ a (* (- b a) p)))
 
 (defun burst-fire (&key x y num-shots direction speed spread func)
-  "burst-fire will pass the value x, y, direction, speed
-recipient-function,"
-  (if (< num-shots 1) (return-from burst-fire))
-  (when (= num-shots 1) ; 1 or less shots
-    (funcall func x y direction speed)
-    (return-from burst-fire))
-  (let ((start-angle (- direction (* spread .5)))
-	(step-angle (/ spread (1- (* 1.0 num-shots)))))
-    (dotimes (i num-shots)
-      (funcall func x y (+ start-angle (* step-angle i)) speed))))
+  "burst-fire will pass the value x, y, direction, speedrecipient-function,"
+  (cond
+    ((= num-shots 1) (funcall func x y direction speed))
+    ((>= num-shots 2)
+     (let ((start-angle (- direction (* spread .5)))
+	   (step-angle (/ spread (1- (float num-shots)))))
+       (dotimes (i num-shots)
+	 (funcall func x y (+ start-angle (* step-angle i)) speed))))))
+
+(defmacro do-burst (((x-var x)
+                     (y-var y)
+                     (num-shots-var num-shots)
+                     (direction-var direction)
+                     (speed-var speed)
+                     spread) &body body)
+  "A macro that iterates through burst directions with user provided symbols"
+  (alexandria:with-gensyms (start-angle step-angle i)
+    (alexandria:once-only (spread)
+      `(let ((,x-var ,x)
+	     (,y-var ,y)
+	     (,num-shots-var ,num-shots)
+	     (,direction-var ,direction)
+	     (,speed-var ,speed))
+	 (cond
+	   ((= ,num-shots-var 1)
+	    ,@body)
+	   ((>= ,num-shots-var 2)
+	    (let ((,start-angle (- ,direction-var (* ,spread .5)))
+		  (,step-angle (/ ,spread (1- (float ,num-shots-var)))))
+	      (dotimes (,i ,num-shots-var)
+		(setf ,num-shots-var ,i) ;Allow per shot number ID
+		(setf ,direction-var (+ ,start-angle (* ,step-angle ,i)))
+		,@body))))))))
+
 
 (defclass game ()
   ((state   :accessor state :initform 'title)
