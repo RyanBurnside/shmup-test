@@ -1,6 +1,6 @@
 (in-package #:shmup-test)
 ;;;; This is the game class, that actually handles resources and major
-;;;; state changes withing the game
+;;;; state changes within the game
 
 
 ;; Accessory defuns
@@ -19,18 +19,6 @@ recipient-function,"
 	(step-angle (/ spread (1- (* 1.0 num-shots)))))
     (dotimes (i num-shots)
       (funcall func x y (+ start-angle (* step-angle i)) speed))))
-
-(defun interpolate-burst-fire (p &key x  y  num-shots  direction  speed spread
-				      x2 y2 num-shots2 direction2 speed2 spread2
-				      func)
-  (funcall #'burst-fire 
-	   :x (intrpl p x x2)
-	   :y (intrpl p y y2)
-	   :num-shots (round (intrpl p num-shots num-shots2))
-	   :direction (intrpl p aim aim2)
-	   :speed (interpl p speed speed2)
-	   :spread (intrpl p spread spread2)
-	   :func func))
 
 (defclass game ()
   ((state   :accessor state :initform 'title)
@@ -51,6 +39,12 @@ recipient-function,"
 		 :initform  (make-array 1 :fill-pointer 0 :adjustable t)
 		 :documentation "A vector allowed to grow as needed")
 
+   (shot-lookup :accessor shot-lookup 
+		:initform (make-array 30 
+				      :element-type 'number 
+				      :initial-element 1.0)
+		:documentation "A mapping that maps a bullet image with width")
+
    (play-area :accessor play-area :initform (make-hitbox 240 320 120 160)
 	      :documentation "Hitbox for defining play area")
 
@@ -65,6 +59,7 @@ recipient-function,"
 (defmethod initialize-instance :after ((game game) &key 
 				       (width 600) 
 				       (height 800))
+	  
   (setf (play-area game)
 	(make-hitbox width height (/ width 2) (/ height 2)))
 
@@ -91,12 +86,14 @@ recipient-function,"
 	  (let* ((p (aref (players game) 0))
 		 (p-x (x p))
 		 (p-y (y P)))
-	    (add-player-shotf game (make-game-object p-x
-						     p-y
-						     :speed 14
-						     :direction (* PI 1.5)
-						     :width 16
-						     :height 16)))))
+	    (player-shootf game 
+			   0
+			   p-x
+			   p-y
+			   (* PI 1.5)
+			   14))))
+			   
+			   
   ;; Bind player 2 actions
   (setf (left-p (aref (players game) 1))
 	(lambda () (sdl:get-key-state :sdl-key-a)))
@@ -116,7 +113,12 @@ recipient-function,"
 			       :spread (* pi .1)
 			       :speed 14
 			       :func (lambda (x y direction speed)
-				       (player-shootf game x y direction speed)))))
+				       (player-shootf game 
+						      0 
+						      x 
+						      y 
+						      direction 
+						      speed)))))
 
 
   ;; Should always be the last function executed in init as it starts SDL
@@ -131,13 +133,25 @@ recipient-function,"
     ;; Load bullet sprite sheet
     (setf (game-bullet-images game)
 	  (sdl-image:load-image 
-	   "Resources/Sprites/shots.gif" 
+	   "Resources/Sprites/bullets.gif" 
 	   :image-type :GIF :force t :color-key-at #(0 0)))
+
     ;; Create cells for bullet sprite sheet
-    (setf (game-bullet-images-cells game)
-	  (loop for y from 0 to (- 192 16) by 16
-	     append (loop for x from 0 to (- 192 16) by 16
-		       collect (list x y 16 16))))
+    (let ((w 16))
+      (setf (game-bullet-images-cells game)
+	    (loop for y from 0 to (- 80 w) by w
+	       append (loop for x from 0 to (- 96 w) by w
+			 collect (list x y w w)))))
+
+    ;; Now give each sprite in the sheet a width (assume square hitbox)
+    (setf (shot-lookup game)
+	  (make-array 30 :initial-contents
+		      '(8 8 8 8 8 8
+			6 6 6 6 6 6
+			6 6 6 6 6 6
+			4 4 4 4 4 4
+			4 4 4 4 4 4)))
+
     ;; Assign cells to bullet sprite sheet  
     (setf (sdl:cells (game-bullet-images game))
 	  (game-bullet-images-cells game))
@@ -160,7 +174,9 @@ recipient-function,"
   ;; Dummy function to set up test scenarios
   (let* ((e (make-instance 'enemy :x 120 :y 64 :speed 0.1))
 	 (em-f (lambda (x y direction speed)
-		 (enemy-shootf game x y direction speed)))
+		 (enemy-shootf game 3 x y direction speed)))
+	 (em-f2 (lambda (x y direction speed)
+		 (enemy-shootf game 0 x y direction speed)))
 
 	 (em (make-instance 'emitter :repeating t :offset-x 16))
 	 (em2 (make-instance 'emitter :repeating t :offset-x -16)))
@@ -174,13 +190,24 @@ recipient-function,"
 			:speed speed
 			:spread spread
 			:func em-f)))
+
+    (setf (shot-push-func em2)
+	  (lambda (&key x y num-shots direction speed spread)
+	    (burst-fire :x x
+			:y y
+			:num-shots num-shots 
+			:direction direction 
+			:speed speed
+			:spread spread
+			:func em-f2)))
+
     (dotimes (i 3)
       (push-burst em :spread (* PI 2.0) :speed 3 :num-shots 16 :step 10)
       (push-burst em2 :spread (* PI 2.0) :speed 3 :num-shots 16 :step 10))
 
-    (dotimes (i 10)
-      (push-burst em :direction 0 :spread (* i 1.4) :speed 5 :num-shots i :step 10)
-      (push-burst em2 :direction PI :spread (* i 1.4) :speed 5 :num-shots i :step 10))
+    (dotimes (i 20)
+      (push-burst em :direction 0 :spread (* i .2) :speed 4 :num-shots i :step 10)
+      (push-burst em2 :direction PI :spread (* i .2) :speed 4 :num-shots i :step 10))
 
     (setf (hitbox e) (make-hitbox 32 32 (x e) (y e)))
     (setf (direction e) (* PI .5))
@@ -205,29 +232,35 @@ recipient-function,"
 (defmethod add-enemyf ((game game) (enemy enemy))
   (vector-push-extend enemy (enemies game)))
 
-(defmethod add-enemy-shotf ((game game) (enemy-shot game-object))
+(defmethod add-enemy-shotf ((game game) (enemy-shot shot))
   (vector-push-extend enemy-shot (enemy-shots game)))
 
-(defmethod add-player-shotf ((game game) (player-shot game-object))
+(defmethod add-player-shotf ((game game) (player-shot shot))
   (vector-push-extend player-shot (player-shots game)))
 
-(defmethod enemy-shootf ((game game) x y direction speed)
+(defmethod enemy-shootf ((game game) visual-tag x y direction speed)
   (add-enemy-shotf game
-		   (make-game-object x
-				     y
-				     :speed speed
-				     :direction direction
-				     :width 8
-				     :height 8)))
+		   (make-shot visual-tag
+			      :x x
+			      :y y
+			      :speed speed
+			      :direction direction
+			      :hitbox (make-hitbox (aref (shot-lookup game) visual-tag)
+						   (aref (shot-lookup game) visual-tag)
+						   x
+						   y))))
 
-(defmethod player-shootf ((game game) x y direction speed)
+(defmethod player-shootf ((game game) visual-tag x y direction speed)
   (add-player-shotf game
-		    (make-game-object x
-				      y
-				      :speed speed
-				      :direction direction
-				      :width 16
-				      :height 16)))
+		    (make-shot visual-tag
+			       :x x
+			       :y y
+			       :speed speed
+			       :direction direction
+			       :hitbox (make-hitbox (aref (shot-lookup game) visual-tag)
+						    (aref (shot-lookup game) visual-tag)
+						    x
+						    y))))
 
 (defmethod draw-hitbox ((game game) (hitbox hitbox))
   (with-accessors ((w width) 
@@ -251,16 +284,16 @@ recipient-function,"
 	 (setf (aref pt 0) (- (round (x i)) 8))
 	 (setf (aref pt 1) (- (round (y i)) 8))
 	 (sdl:draw-surface-at (game-bullet-images game) pt 
-			      :cell 20
+			      :cell (visual-tag i)
 			      :surface (game-screen-buffer game))
-	 (draw-hitbox game (hitbox i)))
+	 )
     (loop for i across (player-shots game) 
        do
 	 (setf (aref pt 0) (- (round (x i)) 8))
 	 (setf (aref pt 1) (- (round (y i)) 8))
 	 (sdl:draw-surface-at (game-bullet-images game) 
 			      pt 
-			      :cell 1
+			      :cell (visual-tag i)
 			      :surface (game-screen-buffer game)))
     (loop for p across (players game)
        do
@@ -344,4 +377,3 @@ recipient-function,"
     (setf enemy-shots (delete-if #'dead enemy-shots))
     (setf player-shots (delete-if #'dead player-shots)))
   (draw-gamef game))
-

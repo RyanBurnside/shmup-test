@@ -8,7 +8,8 @@
   :author "Ryan Burnside"
   :license "GPL whatever"
   :serial t
-  :depends-on (#:lispbuilder-sdl #:lispbuilder-sdl-image) ;CHECK SYNTAX
+  :depends-on (#:lispbuilder-sdl 
+	       #:lispbuilder-sdl-image)
   :components (
 	       (:file "package")
 	       (:file "score-table")
@@ -16,6 +17,7 @@
 	       (:file "hitbox")
 	       (:file "mover")
 	       (:file "game-object")
+	       (:file "shot")
 	       (:file "emitter")
 	       (:file "enemy")
 	       (:file "player")
