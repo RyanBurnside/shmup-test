@@ -8,16 +8,6 @@
   "Return the value at p(0.0 - 1.0) between a and b"
   (+ a (* (- b a) p)))
 
-(defun burst-fire (&key x y num-shots direction speed spread func)
-  "burst-fire will pass the value x, y, direction, speedrecipient-function,"
-  (cond
-    ((= num-shots 1) (funcall func x y direction speed))
-    ((>= num-shots 2)
-     (let ((start-angle (- direction (* spread .5)))
-	   (step-angle (/ spread (1- (float num-shots)))))
-       (dotimes (i num-shots)
-	 (funcall func x y (+ start-angle (* step-angle i)) speed))))))
-
 (defmacro do-burst (((x-var x)
                      (y-var y)
                      (num-shots-var num-shots)
@@ -42,7 +32,6 @@
 		(setf ,num-shots-var ,i) ;Allow per shot number ID
 		(setf ,direction-var (+ ,start-angle (* ,step-angle ,i)))
 		,@body))))))))
-
 
 (defclass game ()
   ((state   :accessor state :initform 'title)
@@ -107,13 +96,11 @@
 	(lambda () (sdl:get-key-state :sdl-key-z)))
   (setf (shot-function (aref (players game) 0))
 	(lambda ()
-	  (let* ((p (aref (players game) 0))
-		 (p-x (x p))
-		 (p-y (y P)))
+	  (let* ((p (aref (players game) 0)))
 	    (player-shootf game 
 			   0
-			   p-x
-			   p-y
+			   (x p)
+			   (y p)
 			   (* PI 1.5)
 			   14))))
 			   
@@ -130,20 +117,13 @@
   (setf (fire-p (aref (players game) 1))
 	(lambda () (sdl:get-key-state :sdl-key-lctrl)))
   (setf (shot-function (aref (players game) 1))
-	(lambda () (burst-fire :x (x (aref (players game) 1))
-			       :y (y (aref (players game) 1))
-			       :num-shots 1
-			       :direction (* pi 1.5)
-			       :spread (* pi .1)
-			       :speed 14
-			       :func (lambda (x y direction speed)
-				       (player-shootf game 
-						      0 
-						      x 
-						      y 
-						      direction 
-						      speed)))))
-
+	(lambda () (let* ((p (aref (players game) 1)))
+		     (player-shootf game 
+				    0
+				    (x p)
+				    (y p)
+				    (* PI 1.5)
+				    14))))
 
   ;; Should always be the last function executed in init as it starts SDL
   (sdl:load-library) ;; DO NOT APPEND BELOW THIS FORM
@@ -196,34 +176,44 @@
 
 (defmethod testing-setup ((game game))
   ;; Dummy function to set up test scenarios
-  (let* ((e (make-instance 'enemy :x 120 :y 64 :speed 0.1))
-	 (em-f (lambda (x y direction speed)
-		 (enemy-shootf game 3 x y direction speed)))
-	 (em-f2 (lambda (x y direction speed)
-		 (enemy-shootf game 0 x y direction speed)))
-
+  (let* ((e (make-instance 'enemy :x 120 :y 64 :speed 0.1 :HP 10))
+	 (em0 (make-instance 'emitter :repeating t))
 	 (em (make-instance 'emitter :repeating t :offset-x 16))
 	 (em2 (make-instance 'emitter :repeating t :offset-x -16)))
 
+    (setf (shot-push-func em0)
+	  (lambda (&key x y num-shots direction speed spread)
+	    (do-burst ((x-pos x) 
+		       (y-pos y) 
+		       (n num-shots) 
+		       (dir direction) 
+		       (spd speed) spread)
+	      (enemy-shootf game (if (oddp n) 8 9) x-pos y-pos dir spd))))
+
     (setf (shot-push-func em)
 	  (lambda (&key x y num-shots direction speed spread)
-	    (burst-fire :x x
-			:y y
-			:num-shots num-shots 
-			:direction direction 
-			:speed speed
-			:spread spread
-			:func em-f)))
+	    (do-burst ((x-pos x) 
+		       (y-pos y) 
+		       (n num-shots) 
+		       (dir direction) 
+		       (spd speed) spread)
+	      (enemy-shootf game (if (oddp n) 0 2) x-pos y-pos dir spd))))
 
     (setf (shot-push-func em2)
 	  (lambda (&key x y num-shots direction speed spread)
-	    (burst-fire :x x
-			:y y
-			:num-shots num-shots 
-			:direction direction 
-			:speed speed
-			:spread spread
-			:func em-f2)))
+	    (do-burst ((x-pos x) 
+		       (y-pos y) 
+		       (n num-shots) 
+		       (dir direction) 
+		       (spd speed) spread)
+	      (enemy-shootf game (if (oddp n) 0 2) x-pos y-pos dir spd))))
+
+    (push-burst em0 :spread (- (* PI 2.0) (/ (* PI 2.0) 16))
+		  :speed 3 :num-shots 16 :step 10)
+
+    (push-burst em0 :spread (- (* PI 2.0) (/ (* PI 2.0) 15))
+		  :speed 3 :num-shots 15 :step 10)
+
 
     (dotimes (i 3)
       (push-burst em :spread (* PI 2.0) :speed 3 :num-shots 16 :step 10)
@@ -235,10 +225,9 @@
 
     (setf (hitbox e) (make-hitbox 32 32 (x e) (y e)))
     (setf (direction e) (* PI .5))
-    (setf (emitters e) (list em em2))
+    (setf (emitters e) (list em0 em em2))
   
-    (add-enemyf game e)
-))
+    (add-enemyf game e)))
 
 
 ;;; getters
@@ -247,7 +236,6 @@
 
 (defmethod height ((game game))
   (height (play-area game)))
-
 
 ;;; Mutators
 (defmethod add-playerf ((game game) (player player))
@@ -309,8 +297,8 @@
 	 (setf (aref pt 1) (- (round (y i)) 8))
 	 (sdl:draw-surface-at (game-bullet-images game) pt 
 			      :cell (visual-tag i)
-			      :surface (game-screen-buffer game))
-	 )
+			      :surface (game-screen-buffer game)))
+
     (loop for i across (player-shots game) 
        do
 	 (setf (aref pt 0) (- (round (x i)) 8))
@@ -319,6 +307,7 @@
 			      pt 
 			      :cell (visual-tag i)
 			      :surface (game-screen-buffer game)))
+
     (loop for p across (players game)
        do
 	 (sdl:draw-surface-at-* (game-player-image game)
@@ -355,6 +344,23 @@
   "Set the fill pointer to 0, prepare to stomp over old values"
   (setf (fill-pointer vec) 0))
 
+(defmethod mark-dead-when-outside ((game game) object)
+  "Mark objects dead if outside game's play area"
+  (when (not (collidep (play-area game) (hitbox object)))
+    (setf (dead object) t)))
+
+;; Double check with-objects and with-living-objects for leaks
+(defmacro with-objects ((container iter &key (pred t)) &body body)
+  "Captures and applies body to elements fulfilling pred"
+  (alexandria:with-gensyms (i)
+    `(loop for ,i across ,container do
+	  (when (funcall ,pred ,i)
+	    (let ((,iter ,i))
+	      ,@body)))))
+
+(defmacro with-living-objects ((container iter) &body body)
+  `(with-objects (,container ,iter :pred (lambda (n) (not (dead n))))
+     ,@body))
 
 (defmethod stepf ((game game))
   "Main step function for the game"
@@ -365,33 +371,27 @@
 		   (enemy-shots enemy-shots)
 		   (play-area play-area))
       game
-    (loop for i across players 
-       do (unless (dead i)
-	    (updatef i)))
-    (loop for i across player-shots 
-       do
-	 (when (not (collidep play-area (hitbox i)))
-	   (setf (dead i) t))
-	 (unless (dead i)
-	   (stepf i)))
-    (loop for i across enemies 
-       do
-	 (when (not(collidep play-area (hitbox i)))
-	   (setf (dead i) t))
-	 (unless (dead i)
-	   (stepf i)))
-    (loop for i across enemy-shots 
-       do
-	 (when (not (collidep play-area (hitbox i)))
-	   (setf (dead i) t))
 
-	 (loop for p across players 
-	    do
-	      (and (collidep (hitbox i) (hitbox p))
-		(setf (dead i) t)))
-
-	 (unless (dead i)
-	   (stepf i)))
+    (with-living-objects (players p)
+      (updatef p))
+    
+    (with-living-objects (player-shots p)
+      (mark-dead-when-outside game p)
+      (stepf p))
+  
+    (with-living-objects (enemies e)
+      (stepf e)
+      (with-living-objects (player-shots p)
+	(when (collidep (hitbox e) (hitbox p))
+	  (decf (HP e) 1)
+	  (setf (dead p) t))))
+    
+    (with-living-objects (enemy-shots e)
+      (stepf e)
+      (mark-dead-when-outside game e)
+      (with-living-objects (players p)
+	(if (collidep (hitbox e) (hitbox p))
+	    (setf (dead e) t))))
     
     ;; game objection interactions here
 
