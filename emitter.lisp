@@ -16,12 +16,12 @@
 
    (shot-push-func :accessor shot-push-func
 		   :initarg :shot-push-func
-		   :initform (lambda (&key x y direction speed num-shots spread))
+		   :initform (constantly nil)
 		   :documentation "Function to push x y speed direction spread into for a new shot to be created")
 
    (aim-player-func :accessor aim-player-func
 		    :initarg :aim-player-func
-		    :initform (lambda (x y) (* PI .5))
+		    :initform (constantly (* PI .5))
 		    :allocation :class
 		    :documentation "Function to pass the emitter's x and y, and get the player's direction for aiming")
 

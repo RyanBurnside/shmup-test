@@ -11,25 +11,16 @@
 		  :initform (make-instance 'ticker :ready-at 1))
    (shot-function :accessor shot-function 
 		  :initarg :shot-function 
-		  :initform (lambda ())
+		  :initform (constantly nil)
 		  :documentation "Action to take upon shot-timer being ready to fire")
    (move-speed :accessor move-speed :initform 3)
    ;; The following should be bound to functions returning true or false
-   (leftp  :accessor left-p  :initform (lambda() nil))
-   (rightp :accessor right-p :initform (lambda() nil))
-   (upp    :accessor up-p    :initform (lambda() nil))
-   (downp  :accessor down-p  :initform (lambda() nil))
-   (firep  :accessor fire-p  :initform (lambda() nil))
-   (bombp  :accessor bomb-p  :initform (lambda() nil))))
-
-
-(defmethod modify-entity ((entity player))
-;; set the player's rate of fire to 5. we can change this while the game is running, and then hit C-c C-c to see the
-;; change happen immediately in game.
-(setf (move-speed entity) 15.0)
-;; you probably want to make an entity class and make the player have this as a parent. then this method would look
-;; like (entity entity) to change something common to all entities.
-)
+   (leftp  :accessor left-p  :initform (constantly nil))
+   (rightp :accessor right-p :initform (constantly nil))
+   (upp    :accessor up-p    :initform (constantly nil))
+   (downp  :accessor down-p  :initform (constantly nil))
+   (firep  :accessor fire-p  :initform (constantly nil))
+   (bombp  :accessor bomb-p  :initform (constantly nil))))
 
 (defmethod updatef ((player player))
   ;; Update inputs

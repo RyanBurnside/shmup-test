@@ -84,46 +84,27 @@
 				:hitbox (make-hitbox 8 10))))
 
   ;; Bind player 1 actions
-  (setf (left-p (aref (players game) 0))
-	(lambda () (sdl:get-key-state :sdl-key-left)))
-  (setf (right-p (aref (players game) 0))
-	(lambda () (sdl:get-key-state :sdl-key-right)))
-  (setf (up-p (aref (players game) 0))
-	(lambda () (sdl:get-key-state :sdl-key-up)))
-  (setf (down-p (aref (players game) 0))
-	(lambda () (sdl:get-key-state :sdl-key-down)))
-  (setf (fire-p (aref (players game) 0))
-	(lambda () (sdl:get-key-state :sdl-key-z)))
-  (setf (shot-function (aref (players game) 0))
-	(lambda ()
-	  (let* ((p (aref (players game) 0)))
-	    (player-shootf game 
-			   0
-			   (x p)
-			   (y p)
-			   (* PI 1.5)
-			   14))))
+  (let ((p (aref (players game) 0)))
+    (setf (left-p p)  (lambda () (sdl:get-key-state :sdl-key-left)))
+    (setf (right-p p) (lambda () (sdl:get-key-state :sdl-key-right)))
+    (setf (up-p p)    (lambda () (sdl:get-key-state :sdl-key-up)))
+    (setf (down-p p)  (lambda () (sdl:get-key-state :sdl-key-down)))
+    (setf (fire-p p)  (lambda () (sdl:get-key-state :sdl-key-z)))
+    (setf (shot-function p) 
+	  (lambda ()
+	    (player-shootf game 0 (x p) (y p) (* PI 1.5) 14))))
 			   
 			   
   ;; Bind player 2 actions
-  (setf (left-p (aref (players game) 1))
-	(lambda () (sdl:get-key-state :sdl-key-a)))
-  (setf (right-p (aref (players game) 1))
-	(lambda () (sdl:get-key-state :sdl-key-d)))
-  (setf (up-p (aref (players game) 1))
-	(lambda () (sdl:get-key-state :sdl-key-w)))
-  (setf (down-p (aref (players game) 1))
-	(lambda () (sdl:get-key-state :sdl-key-s)))
-  (setf (fire-p (aref (players game) 1))
-	(lambda () (sdl:get-key-state :sdl-key-lctrl)))
-  (setf (shot-function (aref (players game) 1))
-	(lambda () (let* ((p (aref (players game) 1)))
-		     (player-shootf game 
-				    0
-				    (x p)
-				    (y p)
-				    (* PI 1.5)
-				    14))))
+  (let ((p (aref (players game) 1)))
+    (setf (left-p p)  (lambda () (sdl:get-key-state :sdl-key-a)))
+    (setf (right-p p) (lambda () (sdl:get-key-state :sdl-key-d)))
+    (setf (up-p p)    (lambda () (sdl:get-key-state :sdl-key-w)))
+    (setf (down-p p)  (lambda () (sdl:get-key-state :sdl-key-s)))
+    (setf (fire-p p)  (lambda () (sdl:get-key-state :sdl-key-lctrl)))
+    (setf (shot-function p)
+	  (lambda () 
+	    (player-shootf game 0 (x p) (y p) (* PI 1.5) 14))))
 
   ;; Should always be the last function executed in init as it starts SDL
   (sdl:load-library) ;; DO NOT APPEND BELOW THIS FORM
@@ -230,14 +211,13 @@
     (add-enemyf game e)))
 
 
-;;; getters
+
 (defmethod width ((game game))
   (width (play-area game)))
 
 (defmethod height ((game game))
   (height (play-area game)))
 
-;;; Mutators
 (defmethod add-playerf ((game game) (player player))
   (vector-push-extend player (players game)))
 
@@ -250,29 +230,29 @@
 (defmethod add-player-shotf ((game game) (player-shot shot))
   (vector-push-extend player-shot (player-shots game)))
 
+(defmethod visual-tag-hitbox ((game game) visual-tag x y)
+  "This returns the hitbox of visual-tag with x and y set"
+  (make-hitbox (aref (shot-lookup game) visual-tag)
+	       (aref (shot-lookup game) visual-tag)
+	       x
+	       y))
+
+(defmethod visual-tag-shot ((game game) visual-tag x y direction speed)
+  (make-shot visual-tag
+	     :x x
+	     :y y
+	     :speed speed
+	     :direction direction
+	     :hitbox (visual-tag-hitbox game visual-tag x y)))
+
 (defmethod enemy-shootf ((game game) visual-tag x y direction speed)
   (add-enemy-shotf game
-		   (make-shot visual-tag
-			      :x x
-			      :y y
-			      :speed speed
-			      :direction direction
-			      :hitbox (make-hitbox (aref (shot-lookup game) visual-tag)
-						   (aref (shot-lookup game) visual-tag)
-						   x
-						   y))))
+		   (visual-tag-shot game visual-tag x y direction speed)))
 
 (defmethod player-shootf ((game game) visual-tag x y direction speed)
-  (add-player-shotf game
-		    (make-shot visual-tag
-			       :x x
-			       :y y
-			       :speed speed
-			       :direction direction
-			       :hitbox (make-hitbox (aref (shot-lookup game) visual-tag)
-						    (aref (shot-lookup game) visual-tag)
-						    x
-						    y))))
+  (add-player-shotf game 
+		    (visual-tag-shot game visual-tag x y direction speed)))
+		    
 
 (defmethod draw-hitbox ((game game) (hitbox hitbox))
   (with-accessors ((w width) 
@@ -319,9 +299,6 @@
     (loop for e across (enemies game)
        do
 	 (draw-hitbox game (hitbox e))))
-
-
-
   (sdl:draw-surface-at-* (game-screen-buffer game) 0 0))
 
 
@@ -344,13 +321,13 @@
   "Set the fill pointer to 0, prepare to stomp over old values"
   (setf (fill-pointer vec) 0))
 
-(defmethod mark-dead-when-outside ((game game) object)
+(defmethod mark-dead-when-outside ((game game) (object game-object))
   "Mark objects dead if outside game's play area"
   (when (not (collidep (play-area game) (hitbox object)))
     (setf (dead object) t)))
 
 ;; Double check with-objects and with-living-objects for leaks
-(defmacro with-objects ((container iter &key (pred t)) &body body)
+(defmacro with-objects ((container iter &key (pred (constantly t))) &body body)
   "Captures and applies body to elements fulfilling pred"
   (alexandria:with-gensyms (i)
     `(loop for ,i across ,container do
