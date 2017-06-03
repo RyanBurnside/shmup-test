@@ -4,35 +4,6 @@
 
 
 ;; Accessory defuns
-(defun intrpl (p a b)
-  "Return the value at p(0.0 - 1.0) between a and b"
-  (+ a (* (- b a) p)))
-
-(defmacro do-burst (((x-var x)
-                     (y-var y)
-                     (num-shots-var num-shots)
-                     (direction-var direction)
-                     (speed-var speed)
-                     spread) &body body)
-  "A macro that iterates through burst directions with user provided symbols"
-  (alexandria:with-gensyms (start-angle step-angle i)
-    (alexandria:once-only (spread)
-      `(let ((,x-var ,x)
-	     (,y-var ,y)
-	     (,num-shots-var ,num-shots)
-	     (,direction-var ,direction)
-	     (,speed-var ,speed))
-	 (cond
-	   ((= ,num-shots-var 1)
-	    ,@body)
-	   ((>= ,num-shots-var 2)
-	    (let ((,start-angle (- ,direction-var (* ,spread .5)))
-		  (,step-angle (/ ,spread (1- (float ,num-shots-var)))))
-	      (dotimes (,i ,num-shots-var)
-		(setf ,num-shots-var ,i) ;Allow per shot number ID
-		(setf ,direction-var (+ ,start-angle (* ,step-angle ,i)))
-		,@body))))))))
-
 (defclass game ()
   ((state   :accessor state :initform 'title)
 
@@ -76,7 +47,7 @@
   (setf (play-area game)
 	(make-hitbox width height (/ width 2) (/ height 2)))
 
-  (dotimes (i 2)
+  (dotimes (i 1)
     (add-playerf game
 		 (make-instance 'player 
 				:x (random (width game))
@@ -85,26 +56,18 @@
 
   ;; Bind player 1 actions
   (let ((p (aref (players game) 0)))
-    (setf (left-p p)  (lambda () (sdl:get-key-state :sdl-key-left)))
-    (setf (right-p p) (lambda () (sdl:get-key-state :sdl-key-right)))
-    (setf (up-p p)    (lambda () (sdl:get-key-state :sdl-key-up)))
-    (setf (down-p p)  (lambda () (sdl:get-key-state :sdl-key-down)))
-    (setf (fire-p p)  (lambda () (sdl:get-key-state :sdl-key-z)))
-    (setf (shot-function p) 
+    (setf 
+     (left-p p)  (lambda () (sdl:get-key-state :sdl-key-left))
+     (right-p p) (lambda () (sdl:get-key-state :sdl-key-right))
+     (up-p p)    (lambda () (sdl:get-key-state :sdl-key-up))
+     (down-p p)  (lambda () (sdl:get-key-state :sdl-key-down))
+     (fire-p p)  (lambda () (sdl:get-key-state :sdl-key-z))
+     (shot-function p) 
 	  (lambda ()
-	    (player-shootf game 0 (x p) (y p) (* PI 1.5) 14))))
-			   
-			   
-  ;; Bind player 2 actions
-  (let ((p (aref (players game) 1)))
-    (setf (left-p p)  (lambda () (sdl:get-key-state :sdl-key-a)))
-    (setf (right-p p) (lambda () (sdl:get-key-state :sdl-key-d)))
-    (setf (up-p p)    (lambda () (sdl:get-key-state :sdl-key-w)))
-    (setf (down-p p)  (lambda () (sdl:get-key-state :sdl-key-s)))
-    (setf (fire-p p)  (lambda () (sdl:get-key-state :sdl-key-lctrl)))
-    (setf (shot-function p)
-	  (lambda () 
-	    (player-shootf game 0 (x p) (y p) (* PI 1.5) 14))))
+	    (do-line (xx yy i (x p) (y p) (+ (x p) 32) (+ 16 (y p)) 3) 
+	      (player-shootf game (+ i 12) xx yy (* PI 1.5) 14))
+	    (do-line (xx yy i (x p) (y p) (- (x p) 32) (+ 16 (y p)) 3) 
+	      (player-shootf game (+ i 12) xx yy (* PI 1.5) 14)))))
 
   ;; Should always be the last function executed in init as it starts SDL
   (sdl:load-library) ;; DO NOT APPEND BELOW THIS FORM

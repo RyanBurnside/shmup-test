@@ -36,9 +36,28 @@
 
   (if (readyp (shot-timer player))
       (resetf (shot-timer player))
-      (tickf (shot-timer player))))
+      (tickf (shot-timer player))))     
+       
+(defmacro bind-controls (player &body body)
+  (let ((plyr (gensym))
+	(keys (mapcar #'car body))
+	(body-funcs (mapcar (lambda (form) `(lambda () ,@(cdr form))) body))
+	(db '((:left . left-p)
+	      (:right . right-p)
+	      (:up . up-p)
+	      (:down . down-p)
+	      (:fire . fire-p)
+	      (:shot-function . shot-function))))
+    `(let ((,plyr ,player))
+       (progn
+	 ,@(mapcar (lambda (key body-func)
+		     (let ((place (list (cdr (assoc key db)) plyr)))
+		       `(setf ,place ,body-func)))
+		   keys body-funcs)))))
+
 
 (defmethod update-controllsf ((player player))
+  ;; Set the movement and speed in accordance with key tests
   (let* ((l (if (funcall (left-p player)) 1 0)) 
 	 (r (if (funcall (right-p player)) 1 0))
 	 (u (if (funcall (up-p player)) 1 0))

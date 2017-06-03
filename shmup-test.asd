@@ -13,6 +13,7 @@
 	       #:alexandria)
   :components (
 	       (:file "package")
+	       (:file "misc-functions")
 	       (:file "score-table")
 	       (:file "ticker")
 	       (:file "hitbox")
