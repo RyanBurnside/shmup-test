@@ -47,7 +47,7 @@
   (setf (play-area game)
 	(make-hitbox width height (/ width 2) (/ height 2)))
 
-  (dotimes (i 1)
+  (dotimes (i 2)
     (add-playerf game
 		 (make-instance 'player 
 				:x (random (width game))
@@ -68,6 +68,23 @@
 	      (player-shootf game (+ i 12) xx yy (* PI 1.5) 14))
 	    (do-line (xx yy i (x p) (y p) (- (x p) 32) (+ 16 (y p)) 3) 
 	      (player-shootf game (+ i 12) xx yy (* PI 1.5) 14)))))
+
+  ;; Bind player 1 actions
+  (let ((p (aref (players game) 1)))
+    (setf 
+     (left-p p)  (lambda () (sdl:get-key-state :sdl-key-a))
+     (right-p p) (lambda () (sdl:get-key-state :sdl-key-d))
+     (up-p p)    (lambda () (sdl:get-key-state :sdl-key-w))
+     (down-p p)  (lambda () (sdl:get-key-state :sdl-key-s))
+     (fire-p p)  (lambda () (sdl:get-key-state :sdl-key-z))
+     (shot-function p) 
+	  (lambda ()
+	    (do-line (xx yy i (x p) (y p) (+ (x p) 32) (+ 16 (y p)) 3) 
+	      (player-shootf game (+ i 12) xx yy (* PI 1.5) 14))
+	    (do-line (xx yy i (x p) (y p) (- (x p) 32) (+ 16 (y p)) 3) 
+	      (player-shootf game (+ i 12) xx yy (* PI 1.5) 14)))))
+
+
 
   ;; Should always be the last function executed in init as it starts SDL
   (sdl:load-library) ;; DO NOT APPEND BELOW THIS FORM
@@ -187,7 +204,7 @@
 
     (setf (hitbox e) (make-hitbox 32 32 (x e) (y e)))
     (setf (direction e) (* PI .5))
-    (setf (emitters e) (list em0 em em2 em3))
+    (setf (emitters e) (list em3))
   
     (add-enemyf game e)))
 
@@ -362,18 +379,25 @@
 				from-x 
 				from-y &key (default-dir (* PI .5)))
   ;; returns the direction to the nearest player default-dir if none living
-  (let ((num-alive (loop for p across (players game) when (alivep p) counting p)))
+  (let ((num-alive (loop for p across (players game) 
+		      when (alivep p) 
+		      counting p)))
     (case num-alive
-     (0  ; No alive players, default direction returned
-      default-dir)
-     (1 ; Single player just aim at him
-      (let ((p (find-if #'alivep (players game))))
-	(point-direction from-x from-y (x p) (y p))))
+     (0 default-dir)
+     (1 (let ((p (find-if #'alivep (players game))))
+	  (point-direction from-x from-y (x p) (y p))))
      (otherwise ; Find closest player and shoot him
       (let* ((result (find-if  #'alivep (players game)))
-	     (last-dist (point-dist (x result) (y result) from-x from-y)))
+	     (last-distance (point-distance (x result) 
+					    (y result) 
+					    from-x 
+					    from-y)))
 	(loop for p across (players game) do
-	     (when (< (point-dist (x p) (y p) from-x from-y) last-dist)
+	     (when (< (point-distance (x p) 
+				      (y p) 
+				      from-x 
+				      from-y) 
+		      last-distance)
 	       (setf result p)))
 	;;Return the direction to the closest here
 	(point-direction from-x from-y (x result) (y result)))))))
