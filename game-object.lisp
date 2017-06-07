@@ -85,4 +85,6 @@
       ;; One or more is Nil, test returns NIL
       nil))
 
+(defmethod alivep ((object game-object))
+  (not (dead object)))
 

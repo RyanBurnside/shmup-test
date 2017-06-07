@@ -1,3 +1,7 @@
+;;;; This is a file for odds n ends that don't really fit into a library at the moment
+
+(in-package :shmup-test)
+
 (defmacro do-burst (((x-var x)
                      (y-var y)
                      (num-shots-var num-shots)
@@ -24,6 +28,7 @@
 		,@body))))))))
 
 (defmacro do-line ((x-var y-var iter-var x y x2 y2 num-steps) &body body)
+  "Move along a line stop at steps to preform body actions"
   (alexandria:with-gensyms (i)
     (alexandria:once-only (x y x2 y2 num-steps)
       `(let ((,x-var 0)
@@ -42,7 +47,6 @@
 (defun point-direction (x y x2 y2)
   (let ((dx (- x2 x))
 	(dy (- y2 y)))
-    (format t "~a ~a ~%" dx dy)
     (if (and (= 0 dx) (= 0 dy))
 	0.0
 	(atan dy dx))))

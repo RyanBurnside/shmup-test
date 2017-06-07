@@ -43,7 +43,7 @@
 
 (defmethod push-burst ((emitter emitter) &key (step 0) (relative t) num-shots speed spread (direction (* PI .5)))
   "Inserts a burst parameter list into an emitter, 
-aim may be a direction or :player to call the assigned player targeting 
+aim may be a direction or 'player to call the assigned player targeting 
 function. Step is the current index which is inserted by adding on to the last 
 index if relative is t otherwise it uses the value of step and clobbers any 
 previous data held at index step"
@@ -67,16 +67,23 @@ previous data held at index step"
 		   (offset-y offset-y)
 		   (ready-at ready-at)
 		   (shot-push-func shot-push-func)
+		   (aim-player-func aim-player-func)
 		   (repeating repeating))
                    emitter
 
   ;; If the tick value matches a key call the bound burst function with plist
   (when (gethash value action-map)
-    (let ((h (gethash value action-map)))
+    (let* ((h (gethash value action-map))
+	  (final-direction (if (numberp (getf h :direction))
+			       (getf h :direction)
+			       (funcall aim-player-func 
+					(+ parent-x offset-x)
+					(+ parent-y offset-y)))))
+					
       (funcall shot-push-func
        :x (+ parent-x offset-x)
        :y (+ parent-y offset-y)
-       :direction (getf h :direction)
+       :direction final-direction
        :speed (getf h :speed)
        :spread (getf h :spread)
        :num-shots (getf h :num-shots))))

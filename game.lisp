@@ -123,7 +123,8 @@
   (let* ((e (make-instance 'enemy :x 120 :y 64 :speed 0.1 :HP 10))
 	 (em0 (make-instance 'emitter :repeating t))
 	 (em (make-instance 'emitter :repeating t :offset-x 16))
-	 (em2 (make-instance 'emitter :repeating t :offset-x -16)))
+	 (em2 (make-instance 'emitter :repeating t :offset-x -16))
+	 (em3 (make-instance 'emitter :repeating t)))
 
     (setf (shot-push-func em0)
 	  (lambda (&key x y num-shots direction speed spread)
@@ -152,12 +153,29 @@
 		       (spd speed) spread)
 	      (enemy-shootf game (if (oddp n) 0 2) x-pos y-pos dir spd))))
 
+
+    (setf (shot-push-func em3)
+	  (lambda (&key x y num-shots direction speed spread)
+	    (do-burst ((x-pos x) 
+		       (y-pos y) 
+		       (n num-shots) 
+		       (dir direction) 
+		       (spd speed) spread)
+	      (enemy-shootf game 3 x-pos y-pos dir spd))))
+
+    (push-burst em3  :spread .20
+		  :speed 6 :num-shots 2 :step 10 :direction 'player)
+
+    (setf (aim-player-func em3) 
+	  (lambda (x y)
+	    (find-closest-player game x y)))
+				 
+
     (push-burst em0 :spread (- (* PI 2.0) (/ (* PI 2.0) 16))
 		  :speed 3 :num-shots 16 :step 10)
 
     (push-burst em0 :spread (- (* PI 2.0) (/ (* PI 2.0) 15))
 		  :speed 3 :num-shots 15 :step 10)
-
 
     (dotimes (i 3)
       (push-burst em :spread (* PI 2.0) :speed 3 :num-shots 16 :step 10)
@@ -169,11 +187,9 @@
 
     (setf (hitbox e) (make-hitbox 32 32 (x e) (y e)))
     (setf (direction e) (* PI .5))
-    (setf (emitters e) (list em0 em em2))
+    (setf (emitters e) (list em0 em em2 em3))
   
     (add-enemyf game e)))
-
-
 
 (defmethod width ((game game))
   (width (play-area game)))
@@ -299,7 +315,7 @@
 	      ,@body)))))
 
 (defmacro with-living-objects ((container iter) &body body)
-  `(with-objects (,container ,iter :pred (lambda (n) (not (dead n))))
+  `(with-objects (,container ,iter :pred (lambda (n) (alivep n)))
      ,@body))
 
 (defmethod stepf ((game game))
@@ -341,3 +357,23 @@
     (setf enemy-shots (delete-if #'dead enemy-shots))
     (setf player-shots (delete-if #'dead player-shots)))
   (draw-gamef game))
+
+(defmethod find-closest-player ((game game) 
+				from-x 
+				from-y &key (default-dir (* PI .5)))
+  ;; returns the direction to the nearest player default-dir if none living
+  (let ((num-alive (loop for p across (players game) when (alivep p) counting p)))
+    (case num-alive
+     (0  ; No alive players, default direction returned
+      default-dir)
+     (1 ; Single player just aim at him
+      (let ((p (find-if #'alivep (players game))))
+	(point-direction from-x from-y (x p) (y p))))
+     (otherwise ; Find closest player and shoot him
+      (let* ((result (find-if  #'alivep (players game)))
+	     (last-dist (point-dist (x result) (y result) from-x from-y)))
+	(loop for p across (players game) do
+	     (when (< (point-dist (x p) (y p) from-x from-y) last-dist)
+	       (setf result p)))
+	;;Return the direction to the closest here
+	(point-direction from-x from-y (x result) (y result)))))))
