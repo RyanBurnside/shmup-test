@@ -300,6 +300,7 @@
 
 (defmethod print-debug ((game game))
   "Debug method called during keypress"
+  (save-screenshot game)
   (when (sdl:get-key-state :sdl-key-f1)
     (format t "player shots: ~a~%" (length (player-shots game)))
     (format t "enemy shots: ~a~%" (length (enemy-shots game)))
@@ -373,7 +374,9 @@
     (setf enemies (delete-if #'dead enemies))
     (setf enemy-shots (delete-if #'dead enemy-shots))
     (setf player-shots (delete-if #'dead player-shots)))
-  (draw-gamef game))
+  (draw-gamef game)
+  (when (sdl:get-key-state :sdl-key-f2)
+    (save-screenshot game)))
 
 (defmethod find-closest-player ((game game) 
 				from-x 
@@ -401,3 +404,7 @@
 	       (setf result p)))
 	;;Return the direction to the closest here
 	(point-direction from-x from-y (x result) (y result)))))))
+
+
+(defmethod save-screenshot ((game game))
+	   (sdl:save-image (game-screen-buffer game) "./capture.bmp"))

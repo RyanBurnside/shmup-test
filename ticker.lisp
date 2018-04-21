@@ -28,6 +28,6 @@
    (:documentation "Calls action on-ready then resets timer to 0"))
 
 (defmethod tickf :after ((ticker-action ticker-action))
-  (when (ready ticker-action)
+  (when (readyp ticker-action)
     (funcall (on-ready ticker-action))
     (resetf ticker-action)))
